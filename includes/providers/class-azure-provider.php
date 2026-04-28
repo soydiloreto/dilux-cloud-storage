@@ -1,0 +1,1187 @@
+<?php
+/**
+ * Azure Blob Storage Provider
+ *
+ * Uploads can be multi-GB binary blobs and use Azure's Block Blob protocol with
+ * streamed bodies via CURLOPT_READFUNCTION / CURLOPT_INFILE. The WP HTTP API
+ * (wp_remote_*) does not support streamed request bodies, so cURL is required
+ * for the actual file transfer here. WP HTTP API IS used for everything else
+ * (auth probes, metadata, list, delete). Filesystem operations operate on local
+ * temporary files outside /wp-content/uploads/, so WP_Filesystem does not apply.
+ * These rules are intentionally suppressed file-wide:
+ *
+ * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_init
+ * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_setopt_array
+ * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_exec
+ * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_getinfo
+ * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_error
+ * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_close
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fread
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+ *
+ * @package DiluxWP\CloudStorage\Providers
+ * @since 1.0.0
+ */
+
+namespace DiluxWP\CloudStorage\Providers;
+
+use DiluxWP\CloudStorage\Interfaces\CloudStorageClientInterface;
+use DiluxWP\CloudStorage\Logger;
+use DiluxWP\CloudStorage\DiluxMimeHelper;
+use DiluxWP\CloudStorage\DTOs\AzureConfig;
+use DiluxWP\CloudStorage\DTOs\ConnectionResult;
+use DiluxWP\CloudStorage\DTOs\UploadResult;
+use DiluxWP\CloudStorage\DTOs\OperationResult;
+use DiluxWP\CloudStorage\DTOs\FileInfo;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Azure Blob Storage Provider
+ *
+ * Implementation of CloudStorageClientInterface for Azure Blob Storage.
+ */
+class AzureProvider implements CloudStorageClientInterface {
+
+    private string $storage_account;
+    private string $container_name;
+    private string $access_key;
+    private string $endpoint;
+    // NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
+
+    /** @var AzureConfig|null Configuration DTO (internal use) */
+    private ?AzureConfig $config = null;
+
+    /**
+     * Constructor
+     *
+     * Accepts array for backward compatibility, but uses AzureConfig DTO internally
+     *
+     * @param array $config Configuration array
+     */
+    public function __construct(array $config = []) {
+        // Initialize primitive properties first (backward compatibility)
+        $this->storage_account = $config['storage_account'] ?? '';
+        $this->container_name = $config['container_name'] ?? '';
+        $this->access_key = $config['access_key'] ?? '';
+        // NOTE: use_https initialization removed - HTTPS is always enforced
+
+        // Build endpoint with HTTPS (Azure requirement - always enforced)
+        $this->endpoint = "https://{$this->storage_account}.blob.core.windows.net";
+
+        // Try to create AzureConfig DTO (with validation) for internal use
+        if (!empty($this->storage_account) && !empty($this->container_name) && !empty($this->access_key)) {
+            try {
+                $this->config = AzureConfig::fromArray($config);
+                Logger::log('[Dilux AzureProvider] Initialized with account: ' . $this->storage_account, 'info');
+            } catch (\InvalidArgumentException $e) {
+                Logger::log('[Dilux AzureProvider] Invalid config: ' . $e->getMessage(), 'error');
+            }
+        }
+    }
+    
+    /**
+     * Test connection to Azure Blob Storage
+     *
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function test_connection(): array {
+        $result = $this->test_connection_dto();
+        return $result->toArray();
+    }
+
+    /**
+     * Test connection to Azure Blob Storage (internal DTO version)
+     *
+     * @return ConnectionResult
+     */
+    private function test_connection_dto(): ConnectionResult {
+        try {
+            $url = $this->endpoint . '/' . $this->container_name . '?restype=container';
+            $headers = $this->get_auth_headers('GET', $url);
+
+            $response = wp_remote_get($url, [
+                'headers' => $headers,
+                'timeout' => 30
+            ]);
+
+            if (is_wp_error($response)) {
+                return ConnectionResult::failure('Connection failed: ' . $response->get_error_message());
+            }
+
+            $response_code = wp_remote_retrieve_response_code($response);
+            $response_body = wp_remote_retrieve_body($response);
+
+            if ($response_code === 200) {
+                return ConnectionResult::success('Connection successful');
+            }
+
+            // Try to extract error message from XML response
+            $error_message = 'Connection failed with status: ' . $response_code;
+            if (!empty($response_body)) {
+                $xml = @simplexml_load_string($response_body);
+                if ($xml && isset($xml->Message)) {
+                    $error_message .= ' - ' . (string)$xml->Message;
+                }
+            }
+
+            return ConnectionResult::failure($error_message);
+
+        } catch (\Exception $e) {
+            return ConnectionResult::failure('Connection error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Upload file to Azure Blob Storage
+     *
+     * @param string $local_path Local file path
+     * @param string $remote_path Remote path in cloud
+     * @param array $options Additional options
+     * @return array ['success' => bool, 'url' => string, 'error' => string]
+     */
+    public function upload_file(string $local_path, string $remote_path, array $options = []): array {
+        $result = $this->upload_file_dto($local_path, $remote_path, $options);
+        return $result->toArray();
+    }
+
+    /**
+     * Upload file to Azure Blob Storage (internal DTO version)
+     *
+     * @param string $local_path Local file path
+     * @param string $remote_path Remote path in cloud
+     * @param array $options Additional options
+     * @return UploadResult
+     */
+    private function upload_file_dto(string $local_path, string $remote_path, array $options = []): UploadResult {
+        try {
+            if (!file_exists($local_path)) {
+                return UploadResult::failure('Local file not found: ' . $local_path);
+            }
+
+            // Normalize remote path (remove leading slash)
+            $remote_path = ltrim($remote_path, '/');
+
+            $url = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+            $file_content = file_get_contents($local_path);
+
+            // ⭐ CRITICAL FIX: Use destination path for MIME type detection (not temp file path)
+            // Temp files from wp_tempnam() have no extension, causing 'application/octet-stream'
+            // For CSS/JS files, browser REQUIRES correct Content-Type (text/css, application/javascript)
+            $path_for_mime = $options['mime_type_from_path'] ?? $local_path;
+            $content_type = DiluxMimeHelper::get_mime_type($path_for_mime);
+
+            // Get auth headers (already includes x-ms-blob-type)
+            $headers = $this->get_auth_headers('PUT', $url, $file_content, $content_type);
+
+            $response = wp_remote_request($url, [
+                'method' => 'PUT',
+                'headers' => $headers,
+                'body' => $file_content,
+                'timeout' => 300
+            ]);
+
+            if (is_wp_error($response)) {
+                return UploadResult::failure('Upload failed: ' . $response->get_error_message());
+            }
+
+            $response_code = wp_remote_retrieve_response_code($response);
+
+            if ($response_code === 201) {
+                return UploadResult::success($url, $remote_path);
+            }
+
+            return UploadResult::failure('Upload failed with status: ' . $response_code);
+
+        } catch (\Exception $e) {
+            return UploadResult::failure('Upload error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Download file from Azure Blob Storage
+     *
+     * @param string $remote_path Remote path in cloud
+     * @param string $local_path Local destination path
+     * @return array ['success' => bool, 'error' => string]
+     */
+    public function download_file(string $remote_path, string $local_path): array {
+        $result = $this->download_file_dto($remote_path, $local_path);
+        return $result->toArray();
+    }
+
+    /**
+     * Download file from Azure Blob Storage (internal DTO version)
+     *
+     * @param string $remote_path Remote path in cloud
+     * @param string $local_path Local destination path
+     * @return OperationResult
+     */
+    private function download_file_dto(string $remote_path, string $local_path): OperationResult {
+        try {
+            $remote_path = ltrim($remote_path, '/');
+            $url = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+
+            $headers = $this->get_auth_headers('GET', $url);
+
+            $response = wp_remote_get($url, [
+                'headers' => $headers,
+                'timeout' => 300
+            ]);
+
+            if (is_wp_error($response)) {
+                return OperationResult::failure('Download failed: ' . $response->get_error_message());
+            }
+
+            $response_code = wp_remote_retrieve_response_code($response);
+
+            if ($response_code === 200) {
+                $file_content = wp_remote_retrieve_body($response);
+
+                // Create directory if it doesn't exist
+                $dir = dirname($local_path);
+                if (!is_dir($dir)) {
+                    wp_mkdir_p($dir);
+                }
+
+                if (file_put_contents($local_path, $file_content) !== false) {
+                    return OperationResult::success();
+                }
+
+                return OperationResult::failure('Failed to write local file: ' . $local_path);
+            }
+
+            return OperationResult::failure('Download failed with status: ' . $response_code);
+
+        } catch (\Exception $e) {
+            return OperationResult::failure('Download error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Check if file exists in Azure Blob Storage
+     *
+     * @param string $remote_path Remote path
+     * @return bool
+     */
+    public function file_exists(string $remote_path): bool {
+        try {
+            $remote_path = ltrim($remote_path, '/');
+            $url = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+            
+            $headers = $this->get_auth_headers('HEAD', $url);
+            
+            $response = wp_remote_head($url, [
+                'headers' => $headers,
+                'timeout' => 30
+            ]);
+            
+            if (is_wp_error($response)) {
+                return false;
+            }
+            
+            return wp_remote_retrieve_response_code($response) === 200;
+            
+        } catch (\Exception $e) {
+            Logger::info('[Dilux AzureProvider] file_exists error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get file checksum from Azure Blob Storage
+     *
+     * @param string $remote_path Remote path
+     * @return string|false MD5 hash or false if error
+     */
+    public function get_file_checksum(string $remote_path) {
+        try {
+            $remote_path = ltrim($remote_path, '/');
+            $url = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+            
+            $headers = $this->get_auth_headers('HEAD', $url);
+            
+            $response = wp_remote_head($url, [
+                'headers' => $headers,
+                'timeout' => 30
+            ]);
+            
+            if (is_wp_error($response)) {
+                return false;
+            }
+            
+            if (wp_remote_retrieve_response_code($response) === 200) {
+                $headers = wp_remote_retrieve_headers($response);
+                return $headers['content-md5'] ?? false;
+            }
+            
+            return false;
+            
+        } catch (\Exception $e) {
+            Logger::info('[Dilux AzureProvider] get_file_checksum error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get file information from Azure (size + MD5)
+     *
+     * @param string $remote_path Remote file path
+     * @return array|false ['size' => int, 'md5' => string, 'last_modified' => string] or false if not found
+     */
+    public function get_file_info(string $remote_path) {
+        $fileInfo = $this->get_file_info_dto($remote_path);
+        return $fileInfo ? $fileInfo->toArray() : false;
+    }
+
+    /**
+     * Get file information from Azure (internal DTO version)
+     *
+     * @param string $remote_path Remote file path
+     * @return FileInfo|null FileInfo object or null if not found
+     */
+    private function get_file_info_dto(string $remote_path): ?FileInfo {
+        try {
+            $remote_path = ltrim($remote_path, '/');
+            $url = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+
+            $headers = $this->get_auth_headers('HEAD', $url);
+
+            $response = wp_remote_head($url, [
+                'headers' => $headers,
+                'timeout' => 30
+            ]);
+
+            if (is_wp_error($response)) {
+                return null;
+            }
+
+            if (wp_remote_retrieve_response_code($response) === 200) {
+                $response_headers = wp_remote_retrieve_headers($response);
+
+                return new FileInfo(
+                    $remote_path,
+                    (int) ($response_headers['content-length'] ?? 0),
+                    $response_headers['content-md5'] ?? null,
+                    $response_headers['last-modified'] ?? null
+                );
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Logger::info('[Dilux AzureProvider] get_file_info error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Delete file from Azure Blob Storage
+     *
+     * @param string $remote_path Remote path
+     * @return array ['success' => bool, 'error' => string]
+     */
+    public function delete_file(string $remote_path): array {
+        $result = $this->delete_file_dto($remote_path);
+        return $result->toArray();
+    }
+
+    /**
+     * Delete file from Azure Blob Storage (internal DTO version)
+     *
+     * @param string $remote_path Remote path
+     * @return OperationResult
+     */
+    private function delete_file_dto(string $remote_path): OperationResult {
+        try {
+            $remote_path = ltrim($remote_path, '/');
+            $url = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+
+            $headers = $this->get_auth_headers('DELETE', $url);
+
+            $response = wp_remote_request($url, [
+                'method' => 'DELETE',
+                'headers' => $headers,
+                'timeout' => 30
+            ]);
+
+            if (is_wp_error($response)) {
+                return OperationResult::failure('Delete failed: ' . $response->get_error_message());
+            }
+
+            $response_code = wp_remote_retrieve_response_code($response);
+
+            if ($response_code === 202) {
+                return OperationResult::success();
+            }
+
+            return OperationResult::failure('Delete failed with status: ' . $response_code);
+
+        } catch (\Exception $e) {
+            return OperationResult::failure('Delete error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Copy blob from one path to another within the same container
+     * Uses Azure Copy Blob API for efficient server-side copy
+     *
+     * @param string $source_path Source blob path
+     * @param string $dest_path Destination blob path
+     * @return array Result array with 'success' and optional 'error'
+     */
+    public function copy_blob(string $source_path, string $dest_path): array {
+        $result = $this->copy_blob_dto($source_path, $dest_path);
+        return $result->toArray();
+    }
+
+    /**
+     * Copy blob from one path to another (internal DTO version)
+     *
+     * Azure Copy Blob API documentation:
+     * https://docs.microsoft.com/en-us/rest/api/storageservices/copy-blob
+     *
+     * @param string $source_path Source blob path
+     * @param string $dest_path Destination blob path
+     * @return OperationResult
+     */
+    private function copy_blob_dto(string $source_path, string $dest_path): OperationResult {
+        try {
+            $source_path = ltrim($source_path, '/');
+            $dest_path = ltrim($dest_path, '/');
+
+            // Build URLs
+            $source_url = $this->endpoint . '/' . $this->container_name . '/' . $source_path;
+            $dest_url = $this->endpoint . '/' . $this->container_name . '/' . $dest_path;
+
+            // Build canonicalized headers for PUT with copy source
+            $date = gmdate('D, d M Y H:i:s T');
+            $parsed_url = wp_parse_url($dest_url);
+
+            // Build canonicalized resource
+            $canonicalized_resource = '/' . $this->storage_account . $parsed_url['path'];
+
+            // Build canonicalized headers (x-ms-* headers sorted alphabetically)
+            // For Copy Blob: x-ms-copy-source comes before x-ms-date
+            $canonicalized_headers = "x-ms-copy-source:" . $source_url . "\n";
+            $canonicalized_headers .= "x-ms-date:" . $date . "\n";
+            $canonicalized_headers .= "x-ms-version:2020-04-08";
+
+            // Build string to sign
+            $string_to_sign = "PUT\n" .
+                             "\n" .  // Content-Encoding
+                             "\n" .  // Content-Language
+                             "\n" .  // Content-Length (empty for copy)
+                             "\n" .  // Content-MD5
+                             "\n" .  // Content-Type
+                             "\n" .  // Date
+                             "\n" .  // If-Modified-Since
+                             "\n" .  // If-Match
+                             "\n" .  // If-None-Match
+                             "\n" .  // If-Unmodified-Since
+                             "\n" .  // Range
+                             $canonicalized_headers . "\n" .
+                             $canonicalized_resource;
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                Logger::info('[Azure Copy Blob] String to sign: ' . str_replace("\n", "\\n", $string_to_sign));
+            }
+
+            $signature = base64_encode(hash_hmac('sha256', $string_to_sign, base64_decode($this->access_key), true));
+            $authorization = "SharedKey " . $this->storage_account . ":" . $signature;
+
+            // Build headers
+            $headers = [
+                'Authorization' => $authorization,
+                'x-ms-date' => $date,
+                'x-ms-version' => '2020-04-08',
+                'x-ms-copy-source' => $source_url,
+                'Content-Length' => '0'
+            ];
+
+            // Execute copy request
+            $response = wp_remote_request($dest_url, [
+                'method' => 'PUT',
+                'headers' => $headers,
+                'timeout' => 30
+            ]);
+
+            if (is_wp_error($response)) {
+                return OperationResult::failure('Copy failed: ' . $response->get_error_message());
+            }
+
+            $response_code = wp_remote_retrieve_response_code($response);
+
+            // Azure returns 202 (Accepted) for successful copy
+            if ($response_code === 202) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    Logger::info('[Dilux AzureProvider] Copy successful: ' . $source_path . ' -> ' . $dest_path);
+                }
+                return OperationResult::success('Blob copied successfully');
+            }
+
+            $response_body = wp_remote_retrieve_body($response);
+            return OperationResult::failure('Copy failed with status ' . $response_code . ': ' . $response_body);
+
+        } catch (\Exception $e) {
+            return OperationResult::failure('Copy error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * List all files in Azure Blob Storage
+     *
+     * @param string $prefix Filter by prefix (e.g., 'uploads/')
+     * @return array Array of file info: [['path' => string, 'size' => int, 'md5' => string], ...]
+     */
+    public function list_files(string $prefix = 'uploads/'): array {
+        $fileInfos = $this->list_files_dto($prefix);
+
+        // Convert FileInfo[] to array[]
+        return array_map(function(FileInfo $fileInfo) {
+            return $fileInfo->toArray();
+        }, $fileInfos);
+    }
+
+    /**
+     * Get container storage statistics
+     *
+     * Lists all blobs and calculates total size and file count.
+     * Caches result in transient for 5 minutes.
+     * This method is specific to Azure (not in CloudStorageClientInterface).
+     *
+     * @param bool $force_refresh Skip transient cache and fetch fresh data
+     * @return array{success: bool, data?: array, message?: string}
+     */
+    public function get_container_stats(bool $force_refresh = false): array {
+        if (!$force_refresh) {
+            $cached = get_transient('dilux_cs_azure_stats');
+            if ($cached !== false) {
+                return ['success' => true, 'data' => $cached];
+            }
+        }
+
+        try {
+            $files = $this->list_files('uploads/');
+            $total_size = 0;
+            $files_by_type = ['images' => 0, 'videos' => 0, 'audio' => 0, 'other' => 0];
+
+            $image_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'tif', 'avif'];
+            $video_exts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'ogv', 'm4v'];
+            $audio_exts = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'wma', 'm4a', 'opus'];
+
+            foreach ($files as $file) {
+                $total_size += (int) ($file['size'] ?? 0);
+                $ext = strtolower(pathinfo($file['path'] ?? '', PATHINFO_EXTENSION));
+                if (in_array($ext, $image_exts, true)) {
+                    $files_by_type['images']++;
+                } elseif (in_array($ext, $video_exts, true)) {
+                    $files_by_type['videos']++;
+                } elseif (in_array($ext, $audio_exts, true)) {
+                    $files_by_type['audio']++;
+                } else {
+                    $files_by_type['other']++;
+                }
+            }
+
+            $data = [
+                'fileCount'          => count($files),
+                'storageUsedBytes'   => $total_size,
+                'storageLimitBytes'  => null,
+                'plan'               => null,
+                'bandwidthUsedBytes' => null,
+                'storageCheckedAt'   => gmdate('c'),
+                'quotaExceeded'      => false,
+                'filesByType'        => $files_by_type,
+            ];
+
+            set_transient('dilux_cs_azure_stats', $data, 300);
+            return ['success' => true, 'data' => $data];
+
+        } catch (\Exception $e) {
+            delete_transient('dilux_cs_azure_stats');
+            \DiluxWP\CloudStorage\ConfigManager::record_connection_failure(
+                $this->extract_error_code($e->getMessage()),
+                $e->getMessage(),
+                'stats_refresh'
+            );
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * List all files in Azure Blob Storage (internal DTO version)
+     *
+     * @param string $prefix Filter by prefix (e.g., 'uploads/')
+     * @return FileInfo[] Array of FileInfo objects
+     */
+    private function list_files_dto(string $prefix = 'uploads/'): array {
+        $max_retries = 3;
+        $retry_delay = 2; // seconds
+
+        // ⭐ RETRY LOOP: Intenta hasta 3 veces en caso de error
+        for ($attempt = 1; $attempt <= $max_retries; $attempt++) {
+            try {
+                $files = [];
+                $marker = null;
+                $page_number = 0;
+
+                // Azure List Blobs API uses pagination
+                do {
+                    $page_number++;
+                    $url = $this->endpoint . '/' . $this->container_name . '?restype=container&comp=list';
+
+                    if ($prefix) {
+                        $url .= '&prefix=' . urlencode($prefix);
+                    }
+
+                    if ($marker) {
+                        $url .= '&marker=' . urlencode($marker);
+                    }
+
+                    $headers = $this->get_auth_headers('GET', $url);
+
+                    $response = wp_remote_get($url, [
+                        'headers' => $headers,
+                        'timeout' => 60
+                    ]);
+
+                    // ⭐ FIX: Lanzar excepción en vez de break silencioso
+                    if (is_wp_error($response)) {
+                        $error_msg = $response->get_error_message();
+                        Logger::info('[Dilux AzureProvider] list_files error on page ' . $page_number . ', attempt ' . $attempt . ': ' . $error_msg);
+                        throw new \Exception('Azure API error on page ' . $page_number . ': ' . $error_msg);
+                    }
+
+                    // Check HTTP status code — Azure returns 403/401 as valid HTTP responses
+                    $http_code = wp_remote_retrieve_response_code($response);
+                    if ($http_code >= 400) {
+                        throw new \Exception('Azure returned HTTP ' . $http_code . ' on page ' . $page_number);
+                    }
+
+                    $body = wp_remote_retrieve_body($response);
+
+                    // ⭐ FIX: Lanzar excepción si respuesta vacía
+                    if (empty($body)) {
+                        Logger::info('[Dilux AzureProvider] Empty response body on page ' . $page_number . ', attempt ' . $attempt);
+                        throw new \Exception('Azure returned empty response on page ' . $page_number);
+                    }
+
+                    // Parse XML response
+                    $xml = simplexml_load_string($body);
+
+                    // ⭐ FIX: Lanzar excepción si XML inválido
+                    if ($xml === false) {
+                        Logger::error('[Dilux AzureProvider] Failed to parse XML on page ' . $page_number . ', attempt ' . $attempt);
+                        throw new \Exception('Invalid XML response from Azure on page ' . $page_number);
+                    }
+
+                    // Extract blobs as FileInfo objects
+                    if (isset($xml->Blobs->Blob)) {
+                        foreach ($xml->Blobs->Blob as $blob) {
+                            $files[] = new FileInfo(
+                                (string) $blob->Name,
+                                (int) $blob->Properties->{'Content-Length'},
+                                isset($blob->Properties->{'Content-MD5'}) ? (string) $blob->Properties->{'Content-MD5'} : null,
+                                (string) $blob->Properties->{'Last-Modified'}
+                            );
+                        }
+                    }
+
+                    // Check for next marker (pagination)
+                    $marker = isset($xml->NextMarker) && !empty($xml->NextMarker) ? (string) $xml->NextMarker : null;
+
+                } while ($marker !== null);
+
+                // ✅ SUCCESS: Listado completo exitoso
+                Logger::info('[Dilux AzureProvider] ✅ Successfully listed ' . count($files) . ' files from Azure in ' . $page_number . ' pages (attempt ' . $attempt . ')');
+                return $files;
+
+            } catch (\Exception $e) {
+                $error_code = $this->extract_error_code($e->getMessage());
+
+                // Do NOT retry client errors (4xx) — they won't resolve on retry
+                if ($this->is_non_retryable_error($error_code)) {
+                    Logger::info('[Dilux AzureProvider] Non-retryable error (' . $error_code . '): ' . $e->getMessage());
+                    \DiluxWP\CloudStorage\ConfigManager::record_connection_failure(
+                        $error_code,
+                        $e->getMessage(),
+                        'list_files'
+                    );
+                    throw $e;
+                }
+
+                // Only retry server errors (5xx) and network errors
+                if ($attempt < $max_retries) {
+                    Logger::error('[Dilux AzureProvider] Attempt ' . $attempt . ' failed (retryable), retrying in ' . $retry_delay . 's... Error: ' . $e->getMessage());
+                    sleep($retry_delay);
+                    continue;
+                } else {
+                    Logger::info('[Dilux AzureProvider] All ' . $max_retries . ' attempts failed. Last error: ' . $e->getMessage());
+                    throw new \Exception('Failed to list Azure files after ' . esc_html((string) $max_retries) . ' attempts: ' . esc_html($e->getMessage()));
+                }
+            }
+        }
+
+        // Este código nunca debería ejecutarse, pero por si acaso
+        throw new \Exception('Unexpected error in list_files_dto retry loop');
+    }
+    
+    /**
+     * Get public URL for file
+     *
+     * @param string $remote_path Remote path
+     * @return string Public URL
+     */
+    public function get_file_url(string $remote_path): string {
+        $remote_path = ltrim($remote_path, '/');
+        return $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
+    }
+    
+    /**
+     * Get provider name
+     *
+     * @return string Provider name
+     */
+    public function get_provider_name(): string {
+        return 'azure';
+    }
+    
+    /**
+     * Generate Azure Blob Storage authentication headers
+     *
+     * @param string $method HTTP method
+     * @param string $url Request URL
+     * @param string $body Request body
+     * @param string $content_type Content type
+     * @return array Headers array
+     */
+    private function get_auth_headers(string $method, string $url, string $body = '', string $content_type = ''): array {
+        $date = gmdate('D, d M Y H:i:s T');
+        $parsed_url = wp_parse_url($url);
+
+        // Build canonicalized resource
+        $canonicalized_resource = '/' . $this->storage_account . $parsed_url['path'];
+
+        // Add canonicalized query parameters (sorted alphabetically)
+        if (isset($parsed_url['query'])) {
+            parse_str($parsed_url['query'], $query_params);
+            ksort($query_params); // Sort alphabetically
+
+            foreach ($query_params as $key => $value) {
+                $canonicalized_resource .= "\n" . strtolower($key) . ':' . $value;
+            }
+        }
+
+        $content_length = strlen($body);
+        $content_md5 = $body ? base64_encode(md5($body, true)) : '';
+
+        // Use provided content_type or default to octet-stream
+        if (empty($content_type) && $body) {
+            $content_type = 'application/octet-stream';
+        }
+
+        // Build canonicalized headers (x-ms-* headers sorted alphabetically)
+        $canonicalized_headers = '';
+
+        // ⭐ CRITICAL: Include x-ms-blob-content-type in signature for PUT requests
+        // Azure requires ALL x-ms-* headers to be signed in alphabetical order
+        // This fixes 403 errors when using stream_flush() with file_put_contents()
+        if ($body && $method === 'PUT') {
+            $canonicalized_headers .= "x-ms-blob-content-type:" . $content_type . "\n";  // 'c' comes before 't'
+            $canonicalized_headers .= "x-ms-blob-type:BlockBlob\n";
+        }
+
+        $canonicalized_headers .= "x-ms-date:" . $date . "\n";
+        $canonicalized_headers .= "x-ms-version:2020-04-08";
+
+        $string_to_sign = $method . "\n" .
+                         "\n" .  // Content-Encoding
+                         "\n" .  // Content-Language
+                         ($content_length > 0 ? $content_length : '') . "\n" .  // Content-Length
+                         $content_md5 . "\n" .  // Content-MD5
+                         $content_type . "\n" .  // Content-Type
+                         "\n" .  // Date
+                         "\n" .  // If-Modified-Since
+                         "\n" .  // If-Match
+                         "\n" .  // If-None-Match
+                         "\n" .  // If-Unmodified-Since
+                         "\n" .  // Range
+                         $canonicalized_headers . "\n" .
+                         $canonicalized_resource;
+
+        $signature = base64_encode(hash_hmac('sha256', $string_to_sign, base64_decode($this->access_key), true));
+
+        $authorization = "SharedKey " . $this->storage_account . ":" . $signature;
+
+        $headers = [
+            'Authorization' => $authorization,
+            'x-ms-date' => $date,
+            'x-ms-version' => '2020-04-08'
+        ];
+
+        if ($body && $method === 'PUT') {
+            $headers['x-ms-blob-type'] = 'BlockBlob';
+            $headers['Content-Type'] = $content_type;
+            $headers['x-ms-blob-content-type'] = $content_type;  // Set blob metadata Content-Type
+            if ($content_md5) {
+                $headers['Content-MD5'] = $content_md5;
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Prepare batch upload handle for parallel sync
+     * Provider-specific implementation for Azure Blob Storage
+     *
+     * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
+     * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+     */
+    public function prepare_batch_upload_handle(array $file_info): array {
+        $local_path = $file_info['local_path'];
+        $remote_path = $file_info['remote_path'];
+
+        if (!file_exists($local_path)) {
+            return [
+                'success' => false,
+                'error' => 'File not found: ' . $local_path,
+                'file_handle' => null
+            ];
+        }
+
+        try {
+            $file_size = filesize($local_path);
+
+            // Build Azure URL with proper encoding for spaces and special characters
+            // HTTPS is always enforced (Azure requirement)
+            $endpoint = "https://{$this->storage_account}.blob.core.windows.net";
+            $remote_path = ltrim($remote_path, '/');
+
+            // ⭐ URL-encode the path components (but not the slashes)
+            $path_parts = explode('/', $remote_path);
+            $encoded_parts = array_map('rawurlencode', $path_parts);
+            $encoded_path = implode('/', $encoded_parts);
+
+            $url = "{$endpoint}/{$this->container_name}/{$encoded_path}";
+
+            // Get MIME type from remote path (extension-based)
+            $content_type = DiluxMimeHelper::get_mime_type($remote_path);
+
+            // Generate Azure Shared Key signature
+            // ⭐ CRITICAL: Signature must use UNENCODED path (Azure requirement)
+            $date = gmdate('D, d M Y H:i:s T');
+            $string_to_sign = "PUT\n\n\n{$file_size}\n\n{$content_type}\n\n\n\n\n\n\nx-ms-blob-type:BlockBlob\nx-ms-date:{$date}\nx-ms-version:2020-04-08\n/{$this->storage_account}/{$this->container_name}/{$remote_path}";
+            $signature = base64_encode(hash_hmac('sha256', $string_to_sign, base64_decode($this->access_key), true));
+
+            // OPTIMIZED: Open file as stream instead of reading into memory
+            $file_handle = fopen($local_path, 'rb');
+            if (!$file_handle) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to open file for reading',
+                    'file_handle' => null
+                ];
+            }
+
+            // Prepare cURL handle with streaming
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'PUT',
+                CURLOPT_UPLOAD => true, // Enable upload mode
+                CURLOPT_INFILE => $file_handle, // STREAMING: Read from file handle
+                CURLOPT_INFILESIZE => $file_size, // Tell cURL the file size
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: SharedKey ' . $this->storage_account . ':' . $signature,
+                    'Content-Type: ' . $content_type,
+                    'Content-Length: ' . $file_size,
+                    'x-ms-blob-type: BlockBlob',
+                    'x-ms-date: ' . $date,
+                    'x-ms-version: 2020-04-08'
+                ],
+                CURLOPT_TIMEOUT => 90, // OPTIMIZED: Reduced from 300s to 90s
+                CURLOPT_CONNECTTIMEOUT => 30
+            ]);
+
+            return [
+                'success' => true,
+                'handle' => $ch,
+                'file_handle' => $file_handle // Must be kept open until upload completes
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Exception: ' . $e->getMessage(),
+                'file_handle' => null
+            ];
+        }
+    }
+
+    /**
+     * Prepare chunked upload handle for large files (>10MB)
+     * Provider-specific implementation for Azure Block Blob API
+     *
+     * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
+     * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+     */
+    public function prepare_chunked_upload_handle(array $file_info): array {
+        $local_path = $file_info['local_path'];
+        $remote_path = $file_info['remote_path'];
+
+        try {
+            // Build Azure URL with proper encoding for spaces and special characters
+            // HTTPS is always enforced (Azure requirement)
+            $endpoint = "https://{$this->storage_account}.blob.core.windows.net";
+            $remote_path = ltrim($remote_path, '/');
+
+            // ⭐ URL-encode the path components (but not the slashes)
+            $path_parts = explode('/', $remote_path);
+            $encoded_parts = array_map('rawurlencode', $path_parts);
+            $encoded_path = implode('/', $encoded_parts);
+
+            $file_size = filesize($local_path);
+            $chunk_size = 4194304; // 4MB chunks
+            $block_ids = [];
+
+            // Upload chunks
+            $fp = fopen($local_path, 'rb');
+            if (!$fp) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to open file for chunked upload',
+                    'file_handle' => null
+                ];
+            }
+
+            $block_index = 0;
+            while (!feof($fp)) {
+                $chunk = fread($fp, $chunk_size);
+                if ($chunk === false || strlen($chunk) === 0) {
+                    break;
+                }
+
+                // Generate unique block ID (base64 encoded, must be same length)
+                $block_id = base64_encode(str_pad($block_index, 6, '0', STR_PAD_LEFT));
+                $block_ids[] = $block_id;
+
+                // Upload block
+                $url = "{$endpoint}/{$this->container_name}/{$encoded_path}?comp=block&blockid=" . urlencode($block_id);
+                $date = gmdate('D, d M Y H:i:s T');
+                $content_length = strlen($chunk);
+
+                // ⭐ CRITICAL: Signature must use UNENCODED path (Azure requirement)
+                $string_to_sign = "PUT\n\n\n{$content_length}\n\n\n\n\n\n\n\n\nx-ms-date:{$date}\nx-ms-version:2020-04-08\n/{$this->storage_account}/{$this->container_name}/{$remote_path}\ncomp:block\nblockid:{$block_id}";
+                $signature = base64_encode(hash_hmac('sha256', $string_to_sign, base64_decode($this->access_key), true));
+
+                $ch = curl_init();
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CUSTOMREQUEST => 'PUT',
+                    CURLOPT_POSTFIELDS => $chunk,
+                    CURLOPT_HTTPHEADER => [
+                        'Authorization: SharedKey ' . $this->storage_account . ':' . $signature,
+                        'Content-Length: ' . $content_length,
+                        'x-ms-date: ' . $date,
+                        'x-ms-version: 2020-04-08'
+                    ],
+                    CURLOPT_TIMEOUT => 60,
+                    CURLOPT_CONNECTTIMEOUT => 30
+                ]);
+
+                $response = curl_exec($ch);
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curl_error = curl_error($ch);
+                curl_close($ch);
+
+                if ($http_code !== 201) {
+                    fclose($fp);
+                    $error_msg = "Failed to upload block {$block_index}: HTTP {$http_code}";
+                    if (!empty($curl_error)) {
+                        $error_msg .= " - cURL: {$curl_error}";
+                    }
+                    if (!empty($response)) {
+                        $error_msg .= " - Azure Response: " . substr($response, 0, 500);
+                    }
+                    Logger::info('[Dilux AzureProvider] Chunked upload error: ' . $error_msg);
+                    return [
+                        'success' => false,
+                        'error' => $error_msg,
+                        'file_handle' => null
+                    ];
+                }
+
+                $block_index++;
+            }
+
+            fclose($fp);
+
+            // Commit blocks with Put Block List
+            $url = "{$endpoint}/{$this->container_name}/{$encoded_path}?comp=blocklist";
+            $date = gmdate('D, d M Y H:i:s T');
+
+            // Build XML block list
+            $block_list_xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
+            foreach ($block_ids as $block_id) {
+                $block_list_xml .= '<Latest>' . $block_id . '</Latest>';
+            }
+            $block_list_xml .= '</BlockList>';
+
+            $content_length = strlen($block_list_xml);
+            $content_type = DiluxMimeHelper::get_mime_type($remote_path);
+
+            // ⭐ CRITICAL: Signature must use UNENCODED path (Azure requirement)
+            $string_to_sign = "PUT\n\n\n{$content_length}\n\napplication/xml\n\n\n\n\n\n\nx-ms-blob-content-type:{$content_type}\nx-ms-date:{$date}\nx-ms-version:2020-04-08\n/{$this->storage_account}/{$this->container_name}/{$remote_path}\ncomp:blocklist";
+            $signature = base64_encode(hash_hmac('sha256', $string_to_sign, base64_decode($this->access_key), true));
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST => 'PUT',
+                CURLOPT_POSTFIELDS => $block_list_xml,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: SharedKey ' . $this->storage_account . ':' . $signature,
+                    'Content-Type: application/xml',
+                    'Content-Length: ' . $content_length,
+                    'x-ms-blob-content-type: ' . $content_type,
+                    'x-ms-date: ' . $date,
+                    'x-ms-version: 2020-04-08'
+                ],
+                CURLOPT_TIMEOUT => 60,
+                CURLOPT_CONNECTTIMEOUT => 30
+            ]);
+
+            // For compatibility with parallel upload, return a dummy handle
+            // Chunked upload is already complete at this point
+            return [
+                'success' => true,
+                'handle' => $ch,
+                'file_handle' => null // No file handle needed, upload is synchronous
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Chunked upload exception: ' . $e->getMessage(),
+                'file_handle' => null
+            ];
+        }
+    }
+
+    /**
+     * Prepare a cURL handle for downloading a file from Azure Blob Storage
+     * Used by SyncManager for parallel downloads during reverse sync (disconnect)
+     *
+     * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
+     * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+     */
+    public function prepare_download_handle(array $file_info): array {
+        $remote_path = $file_info['remote_path'];
+        $local_path = $file_info['local_path'];
+
+        try {
+            // HTTPS is always enforced (Azure requirement)
+
+            // Build Azure URL with proper encoding for spaces and special characters
+            $endpoint = "https://{$this->storage_account}.blob.core.windows.net";
+            $remote_path_clean = ltrim($remote_path, '/');
+
+            // ⭐ URL-encode the path components (but not the slashes)
+            $path_parts = explode('/', $remote_path_clean);
+            $encoded_parts = array_map('rawurlencode', $path_parts);
+            $encoded_path = implode('/', $encoded_parts);
+
+            $url = "{$endpoint}/{$this->container_name}/{$encoded_path}";
+
+            // Generate Azure Shared Key signature for GET
+            // ⭐ CRITICAL: Signature must use UNENCODED path (Azure requirement)
+            // The HTTP URL uses encoded path, but the signature uses original unencoded path
+            $date = gmdate('D, d M Y H:i:s T');
+            $canonicalized_resource = "/{$this->storage_account}/{$this->container_name}/{$remote_path_clean}";
+            $string_to_sign = "GET\n\n\n\n\n\n\n\n\n\n\n\nx-ms-date:{$date}\nx-ms-version:2020-04-08\n{$canonicalized_resource}";
+            $signature = base64_encode(hash_hmac('sha256', $string_to_sign, base64_decode($this->access_key), true));
+
+            // Create directory if needed
+            $dir = dirname($local_path);
+            if (!is_dir($dir)) {
+                wp_mkdir_p($dir);
+            }
+
+            // Open file for writing
+            $file_handle = fopen($local_path, 'wb');
+            if (!$file_handle) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to open local file for writing',
+                    'file_handle' => null
+                ];
+            }
+
+            // Prepare cURL handle with streaming download
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => false, // Don't return, write to file
+                CURLOPT_FILE => $file_handle, // STREAMING: Write directly to file
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: SharedKey ' . $this->storage_account . ':' . $signature,
+                    'x-ms-date: ' . $date,
+                    'x-ms-version: 2020-04-08'
+                ],
+                CURLOPT_TIMEOUT => 90,
+                CURLOPT_CONNECTTIMEOUT => 30,
+                CURLOPT_FOLLOWLOCATION => false
+            ]);
+
+            return [
+                'success' => true,
+                'handle' => $ch,
+                'file_handle' => $file_handle // Must be kept open until download completes
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Download preparation exception: ' . $e->getMessage(),
+                'file_handle' => null
+            ];
+        }
+    }
+
+    /**
+     * Extract HTTP error code from exception message.
+     *
+     * @param string $message Exception message
+     * @return string Error code (e.g. '403', '401', 'network')
+     */
+    private function extract_error_code(string $message): string {
+        if (preg_match('/\b(400|401|403|404|409|500|502|503)\b/', $message, $matches)) {
+            return $matches[1];
+        }
+        if (stripos($message, 'timeout') !== false) {
+            return 'timeout';
+        }
+        if (stripos($message, 'cURL') !== false || stripos($message, 'network') !== false) {
+            return 'network';
+        }
+        return 'unknown';
+    }
+
+    /**
+     * Check if error code is non-retryable (client errors).
+     *
+     * @param string $error_code Error code from extract_error_code()
+     * @return bool True if error should NOT be retried
+     */
+    private function is_non_retryable_error(string $error_code): bool {
+        return in_array($error_code, ['400', '401', '403', '404', '409'], true);
+    }
+}

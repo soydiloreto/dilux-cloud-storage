@@ -1,0 +1,121 @@
+<?php
+namespace DiluxWP\CloudStorage\DTOs;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Azure Configuration DTO
+ *
+ * Immutable value object for Azure Blob Storage configuration
+ *
+ * @package DiluxWP\CloudStorage\DTOs
+ * @since 1.0.0
+ */
+class AzureConfig {
+
+    private string $storageAccount;
+    private string $containerName;
+    private string $accessKey;
+    private string $endpoint;
+
+    /**
+     * Constructor
+     *
+     * @param string $storageAccount
+     * @param string $containerName
+     * @param string $accessKey
+     */
+    public function __construct(string $storageAccount, string $containerName, string $accessKey) {
+        if (empty($storageAccount)) {
+            throw new \InvalidArgumentException('Storage account cannot be empty');
+        }
+        if (empty($containerName)) {
+            throw new \InvalidArgumentException('Container name cannot be empty');
+        }
+        if (empty($accessKey)) {
+            throw new \InvalidArgumentException('Access key cannot be empty');
+        }
+
+        $this->storageAccount = $storageAccount;
+        $this->containerName = $containerName;
+        $this->accessKey = $accessKey;
+        $this->endpoint = "https://{$storageAccount}.blob.core.windows.net";
+    }
+
+    /**
+     * Create from array configuration
+     *
+     * @param array $config
+     * @return self
+     * @throws \InvalidArgumentException
+     */
+    public static function fromArray(array $config): self {
+        return new self(
+            $config['storage_account'] ?? '',
+            $config['container_name'] ?? '',
+            $config['access_key'] ?? ''
+        );
+    }
+
+    /**
+     * Get storage account name
+     *
+     * @return string
+     */
+    public function getStorageAccount(): string {
+        return $this->storageAccount;
+    }
+
+    /**
+     * Get container name
+     *
+     * @return string
+     */
+    public function getContainerName(): string {
+        return $this->containerName;
+    }
+
+    /**
+     * Get access key
+     *
+     * @return string
+     */
+    public function getAccessKey(): string {
+        return $this->accessKey;
+    }
+
+    /**
+     * Get endpoint URL
+     *
+     * @return string
+     */
+    public function getEndpoint(): string {
+        return $this->endpoint;
+    }
+
+    /**
+     * Convert to array format
+     *
+     * @return array
+     */
+    public function toArray(): array {
+        return [
+            'storage_account' => $this->storageAccount,
+            'container_name' => $this->containerName,
+            'access_key' => $this->accessKey
+        ];
+    }
+
+    /**
+     * Check if configuration is valid
+     *
+     * @return bool
+     */
+    public function isValid(): bool {
+        return !empty($this->storageAccount)
+            && !empty($this->containerName)
+            && !empty($this->accessKey);
+    }
+}

@@ -1,0 +1,114 @@
+<?php
+namespace DiluxWP\CloudStorage\Factories;
+
+use DiluxWP\CloudStorage\Interfaces\CloudStorageClientInterface;
+use DiluxWP\CloudStorage\Providers\AzureProvider;
+use DiluxWP\CloudStorage\Providers\DiluxOneCloudProvider;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Cloud Storage Factory
+ * 
+ * Factory class to create cloud storage provider instances
+ */
+class CloudStorageFactory {
+    
+    /**
+     * Create cloud storage client instance
+     * 
+     * @param string $provider Provider name (azure, aws, etc.)
+     * @param array $config Configuration array
+     * @return CloudStorageClientInterface|null
+     * @throws Exception If provider is not supported
+     */
+    public static function create($provider, $config = []) {
+        switch (strtolower($provider)) {
+            case 'diluxone':
+                return new DiluxOneCloudProvider($config);
+
+            case 'azure':
+                return new AzureProvider($config);
+                
+            case 'aws':
+                // Future implementation
+                throw new \Exception('AWS S3 provider not implemented yet');
+                
+            case 'gcp':
+                // Future implementation
+                throw new \Exception('Google Cloud Storage provider not implemented yet');
+                
+            default:
+                throw new \Exception('Unsupported cloud storage provider: ' . esc_html($provider));
+        }
+    }
+    
+    /**
+     * Get list of supported providers
+     * 
+     * @return array
+     */
+    public static function get_supported_providers() {
+        return [
+            'diluxone' => [
+                'name' => 'Dilux One Cloud (Managed)',
+                'implemented' => true,
+                'config_fields' => [
+                    'api_key' => 'API Key'
+                ]
+            ],
+            'azure' => [
+                'name' => 'Azure Blob Storage',
+                'implemented' => true,
+                'config_fields' => [
+                    'storage_account' => 'Storage Account Name',
+                    'container_name' => 'Container Name',
+                    'access_key' => 'Access Key'
+                ]
+            ],
+            'aws' => [
+                'name' => 'Amazon S3',
+                'implemented' => false,
+                'config_fields' => [
+                    'bucket_name' => 'Bucket Name',
+                    'access_key_id' => 'Access Key ID',
+                    'secret_access_key' => 'Secret Access Key',
+                    'region' => 'Region'
+                ]
+            ],
+            'gcp' => [
+                'name' => 'Google Cloud Storage',
+                'implemented' => false,
+                'config_fields' => [
+                    'bucket_name' => 'Bucket Name',
+                    'project_id' => 'Project ID',
+                    'service_account_key' => 'Service Account Key (JSON)'
+                ]
+            ]
+        ];
+    }
+    
+    /**
+     * Check if provider is supported and implemented
+     * 
+     * @param string $provider
+     * @return bool
+     */
+    public static function is_provider_supported($provider) {
+        $providers = self::get_supported_providers();
+        return isset($providers[$provider]) && $providers[$provider]['implemented'];
+    }
+    
+    /**
+     * Get provider configuration fields
+     * 
+     * @param string $provider
+     * @return array
+     */
+    public static function get_provider_config_fields($provider) {
+        $providers = self::get_supported_providers();
+        return $providers[$provider]['config_fields'] ?? [];
+    }
+}

@@ -1,0 +1,533 @@
+/* Dilux One Cloud Storage Admin Styles */
+
+/* =============================================================================
+   Tab Navigation with Icons
+   ========================================================================== */
+
+.dilux-cloud-storage-admin .nav-tab-wrapper {
+    border-bottom: 1px solid #c3c4c7;
+    padding: 0;
+    margin: 20px 0 0 0;
+}
+
+.dilux-cloud-storage-admin .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    padding: 10px 15px;
+}
+
+.dilux-cloud-storage-admin .nav-tab .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.dilux-cloud-storage-admin h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dilux-cloud-storage-admin h1 .dashicons {
+    color: #0073aa;
+}
+
+.dilux-cs-settings,
+.dilux-cs-overview,
+.dilux-cs-migration,
+.dilux-cs-activity,
+.dilux-cs-status {
+    margin-top: 20px;
+}
+
+/* Configuration Section */
+.configuration-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    margin: 20px 0;
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.configuration-section h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.form-row input[type="text"],
+.form-row input[type="password"] {
+    width: 100%;
+    max-width: 500px;
+}
+
+.form-row .description {
+    font-style: italic;
+    color: #646970;
+    margin-top: 5px;
+}
+
+/* Test Connection Button */
+.test-connection-wrapper {
+    margin-top: 20px;
+}
+
+#test-connection {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: #fff;
+}
+
+#test-connection:hover {
+    background: #005a87;
+    border-color: #005a87;
+}
+
+#test-connection.testing {
+    background: #646970;
+    border-color: #646970;
+    cursor: not-allowed;
+}
+
+/* Test Connection Results */
+.test-result,
+.connection-result {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 4px;
+    display: none;
+}
+
+.test-result.success,
+.connection-result.success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.test-result.error,
+.connection-result.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.test-result.warning,
+.connection-result.warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.stats-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stats-number {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #0073aa;
+    display: block;
+}
+
+.stats-label {
+    color: #646970;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+.stats-size {
+    font-size: 0.8em;
+    color: #646970;
+    margin-top: 2px;
+}
+
+/* Activity Log */
+.activity-filters {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.filter-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-row label {
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.activity-table {
+    margin-top: 20px;
+}
+
+.activity-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.activity-table th,
+.activity-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.activity-table th {
+    background: #f6f7f7;
+    font-weight: 600;
+}
+
+.activity-type {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.activity-type.upload {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.activity-type.delete {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.activity-type.migration {
+    background: #cff4fc;
+    color: #055160;
+}
+
+.activity-type.config {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+.activity-type.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Migration Tools */
+.migration-tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.migration-tool {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+}
+
+.migration-tool h4 {
+    margin-top: 0;
+    color: #0073aa;
+}
+
+.migration-progress {
+    background: #f6f7f7;
+    border-radius: 10px;
+    height: 20px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.migration-progress-bar {
+    background: #0073aa;
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+/* Status Health */
+.system-health {
+    margin: 20px 0;
+}
+
+.health-overview {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+}
+
+.health-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #fff;
+}
+
+.health-circle.healthy {
+    background: #00a32a;
+}
+
+.health-circle.warning {
+    background: #dba617;
+}
+
+.health-circle.critical {
+    background: #d63638;
+}
+
+.health-summary {
+    display: flex;
+    gap: 30px;
+}
+
+.health-metric {
+    text-align: center;
+}
+
+.health-metric-number {
+    font-size: 2em;
+    font-weight: bold;
+    color: #0073aa;
+}
+
+.summary-label {
+    color: #646970;
+    font-size: 0.9em;
+}
+
+/* Status Checks */
+.status-checks {
+    margin: 20px 0;
+}
+
+.status-check {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    margin: 10px 0;
+    padding: 20px;
+    position: relative;
+}
+
+.status-check.passed {
+    border-left: 4px solid #00a32a;
+}
+
+.status-check.warning {
+    border-left: 4px solid #dba617;
+}
+
+.status-check.failed {
+    border-left: 4px solid #d63638;
+}
+
+.check-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.check-status {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.check-status.passed {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.check-status.warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.check-status.failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.check-details {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f6f7f7;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.check-description {
+    margin: 10px 0;
+    color: #646970;
+}
+
+/* Network Settings */
+.network-warning {
+    background: #fff3cd;
+    border: 1px solid #ffecb5;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+    color: #856404;
+}
+
+/* DiluxOne Stats Panel */
+.dilux-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+}
+
+.dilux-stat-card {
+	background: #f9f9f9;
+	border: 1px solid #e2e4e7;
+	border-radius: 6px;
+	padding: 14px;
+	text-align: center;
+}
+
+.dilux-stat-card-wide {
+	grid-column: 1 / -1;
+}
+
+.dilux-stat-label {
+	font-size: 12px;
+	color: #646970;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	margin-bottom: 6px;
+}
+
+.dilux-stat-value {
+	font-size: 20px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.dilux-stat-detail {
+	font-size: 13px;
+	color: #50575e;
+	margin-top: 6px;
+}
+
+.dilux-stat-bar-container {
+	height: 10px;
+	border-radius: 5px;
+	overflow: hidden;
+	margin-top: 8px;
+}
+
+.dilux-stat-bar {
+	height: 100%;
+	border-radius: 5px;
+	transition: width 0.3s ease;
+}
+
+/* Spin animation for refresh button */
+.dashicons.spin {
+	animation: dilux-spin 1s linear infinite;
+}
+
+@keyframes dilux-spin {
+	100% { transform: rotate(360deg); }
+}
+
+/* Provider Info table */
+.dilux-provider-info th {
+	width: 150px;
+	padding: 8px 10px 8px 0;
+}
+
+.dilux-provider-info td {
+	padding: 8px 10px;
+}
+
+.dilux-provider-info code {
+	background: #f0f0f1;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dilux-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .migration-tools {
+        grid-template-columns: 1fr;
+    }
+    
+    .health-overview {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .health-summary {
+        justify-content: center;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* WordPress Admin Compatibility */
+.wrap h1 {
+    margin-bottom: 20px;
+}
+
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+}

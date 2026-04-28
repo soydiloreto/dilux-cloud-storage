@@ -1,0 +1,102 @@
+<?php
+namespace DiluxWP\CloudStorage\Enums;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Plugin State Enum
+ *
+ * Defines all possible states of the plugin
+ *
+ * ⚠️ CLEANUP 2025-10-11: Removed DISCONNECTING and ERROR states (dead code)
+ * - DISCONNECTING: Never used (reverse sync happens while OFFLOADING_ACTIVE)
+ * - ERROR: Never used (errors handled at file level, not plugin level)
+ */
+class PluginState {
+
+    const NOT_CONFIGURED = 'not_configured';       // No cloud provider configured
+    const CONFIGURED = 'configured';               // Cloud provider configured but not synced
+    const SYNCING = 'syncing';                    // Initial sync in progress
+    const SYNCED = 'synced';                      // Initial sync complete, ready for offloading
+    const OFFLOADING_ACTIVE = 'offloading_active'; // Stream wrapper active, files go to cloud
+
+    /**
+     * Get all available states
+     *
+     * @return array
+     */
+    public static function get_all_states() {
+        return [
+            self::NOT_CONFIGURED,
+            self::CONFIGURED,
+            self::SYNCING,
+            self::SYNCED,
+            self::OFFLOADING_ACTIVE
+        ];
+    }
+
+    /**
+     * Get state display name
+     *
+     * @param string $state State constant
+     * @return string Human readable name
+     */
+    public static function get_state_name($state) {
+        $names = [
+            self::NOT_CONFIGURED => __('Not Configured', 'dilux-cloud-storage'),
+            self::CONFIGURED => __('Configured', 'dilux-cloud-storage'),
+            self::SYNCING => __('Syncing Files', 'dilux-cloud-storage'),
+            self::SYNCED => __('Synced', 'dilux-cloud-storage'),
+            self::OFFLOADING_ACTIVE => __('Offloading Active', 'dilux-cloud-storage')
+        ];
+
+        return $names[$state] ?? $state;
+    }
+
+    /**
+     * Check if state allows sync to start
+     *
+     * @param string $state
+     * @return bool
+     */
+    public static function can_start_sync($state) {
+        return $state === self::CONFIGURED;
+    }
+    
+    /**
+     * Check if state allows offloading activation
+     * 
+     * @param string $state
+     * @return bool
+     */
+    public static function can_activate_offloading($state) {
+        return $state === self::SYNCED;
+    }
+    
+    /**
+     * Check if offloading is currently active
+     * 
+     * @param string $state
+     * @return bool
+     */
+    public static function is_offloading_active($state) {
+        return $state === self::OFFLOADING_ACTIVE;
+    }
+    
+    /**
+     * Check if state allows disconnection (reverse sync)
+     *
+     * Note: Reverse sync (downloading files from cloud) happens WHILE
+     * the state remains OFFLOADING_ACTIVE. There is no separate
+     * DISCONNECTING state. After reverse sync completes, user must
+     * manually "Deactivate Offloading" to transition to SYNCED.
+     *
+     * @param string $state
+     * @return bool
+     */
+    public static function can_disconnect($state) {
+        return in_array($state, [self::SYNCED, self::OFFLOADING_ACTIVE]);
+    }
+}
