@@ -17,16 +17,32 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use DiluxWP\CloudStorage\Admin;
 use DiluxWP\CloudStorage\ConfigManager;
 
 use DiluxWP\CloudStorage\Enums\PluginState;
 
 // Get plugin state and config
 $plugin_state = ConfigManager::get_state();
-$is_configured = !empty($config['cloud_provider']);
+// Single source of truth — same definition used by the Status tab.
+// `is_configured()` is FALSE when stored credentials cannot be decrypted
+// (the field is cleared post-decrypt). The "looser" `!empty(cloud_provider)`
+// check would diverge here and create the kind of cross-tab inconsistency
+// we are trying to remove.
+$is_configured = ConfigManager::is_configured();
 $is_synced = in_array($plugin_state, [PluginState::SYNCED, PluginState::OFFLOADING_ACTIVE]);
 $is_offloading = $plugin_state === PluginState::OFFLOADING_ACTIVE;
 $cloud_stats = $cloud_stats ?? null;
+
+// Health context (mirrors admin-status-tools.php) — when the cloud connection
+// is unhealthy, every card below shows a "paused" sub-state so the user
+// doesn't see contradictory greens like "Configured / Active" while the
+// banner above reports unreadable credentials. We do NOT mutate the
+// underlying state machine here — only the *display* changes.
+$health      = ConfigManager::get_connection_health();
+$is_paused   = $health['status'] === 'unhealthy';
+$pause_cause = (string) ($health['error_code'] ?? '');
+$pause_label = $is_paused ? Admin::pause_reason_short($pause_cause) : '';
 ?>
 
 <div class="dilux-cs-overview">
@@ -44,13 +60,25 @@ $cloud_stats = $cloud_stats ?? null;
     <!-- Status Cards Grid -->
     <div class="status-grid">
         <!-- Configuration Status -->
-        <div class="status-card <?php echo $is_configured ? 'status-success' : 'status-warning'; ?>">
+        <?php
+        // Visual mode: success (green) only when configured AND not paused.
+        // When paused, downgrade to "warning" so the green check doesn't
+        // contradict the red banner above the page.
+        //
+        // NOTE: vocabulary is intentionally identical to the Status tab —
+        // "Awaiting Re-entry" for decrypt failures, "Paused (X)" for other
+        // paused states. Keep these strings in sync with admin-status-tools.php.
+        $config_card_mode = (!$is_configured || $is_paused) ? 'status-warning' : 'status-success';
+        $config_card_icon = (!$is_configured || $is_paused) ? 'dashicons-warning' : 'dashicons-yes-alt';
+        $is_decrypt_failure = $is_paused && $pause_cause === 'decrypt_failed';
+        ?>
+        <div class="status-card <?php echo esc_attr($config_card_mode); ?>">
             <div class="status-icon">
-                <span class="dashicons <?php echo $is_configured ? 'dashicons-yes-alt' : 'dashicons-warning'; ?>"></span>
+                <span class="dashicons <?php echo esc_attr($config_card_icon); ?>"></span>
             </div>
             <div class="status-content">
                 <h3><?php esc_html_e('Configuration', 'dilux-cloud-storage'); ?></h3>
-                <?php if ($is_configured): ?>
+                <?php if ($is_configured && !$is_paused): ?>
                     <p class="status-label status-active"><?php esc_html_e('Configured', 'dilux-cloud-storage'); ?></p>
                     <p class="status-details">
                         <?php
@@ -77,6 +105,27 @@ $cloud_stats = $cloud_stats ?? null;
                             ?>
                         </p>
                     <?php endif; ?>
+                <?php elseif ($is_decrypt_failure): ?>
+                    <p class="status-label" style="color:#dba617;"><?php esc_html_e('Awaiting Re-entry', 'dilux-cloud-storage'); ?></p>
+                    <p class="status-details" style="color:#856404;">
+                        <?php esc_html_e('Stored credentials cannot be decrypted. See banner above.', 'dilux-cloud-storage'); ?>
+                    </p>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=dilux-cloud-storage&tab=cloud-provider')); ?>" class="button button-primary button-small">
+                        <?php esc_html_e('Re-enter Credentials', 'dilux-cloud-storage'); ?>
+                    </a>
+                <?php elseif ($is_configured && $is_paused): ?>
+                    <p class="status-label" style="color:#dba617;">
+                        <?php
+                        printf(
+                            /* translators: %s: short reason, e.g. "permission denied" */
+                            esc_html__('Paused (%s)', 'dilux-cloud-storage'),
+                            esc_html($pause_label)
+                        );
+                        ?>
+                    </p>
+                    <p class="status-details" style="color:#856404;">
+                        <?php esc_html_e('See banner above for details.', 'dilux-cloud-storage'); ?>
+                    </p>
                 <?php else: ?>
                     <p class="status-label status-inactive"><?php esc_html_e('Not Configured', 'dilux-cloud-storage'); ?></p>
                     <p class="status-details">
@@ -90,16 +139,32 @@ $cloud_stats = $cloud_stats ?? null;
         </div>
 
         <!-- Sync Status -->
-        <div class="status-card <?php echo $is_synced ? 'status-success' : 'status-neutral'; ?>">
+        <?php
+        $sync_card_mode = ($is_synced && !$is_paused) ? 'status-success' : ($is_synced && $is_paused ? 'status-warning' : 'status-neutral');
+        ?>
+        <div class="status-card <?php echo esc_attr($sync_card_mode); ?>">
             <div class="status-icon">
                 <span class="dashicons <?php echo $is_synced ? 'dashicons-cloud-saved' : 'dashicons-cloud-upload'; ?>"></span>
             </div>
             <div class="status-content">
                 <h3><?php esc_html_e('Synchronization', 'dilux-cloud-storage'); ?></h3>
-                <?php if ($is_synced): ?>
+                <?php if ($is_synced && !$is_paused): ?>
                     <p class="status-label status-active"><?php esc_html_e('Synced', 'dilux-cloud-storage'); ?></p>
                     <p class="status-details">
                         <?php esc_html_e('Your files are in the cloud', 'dilux-cloud-storage'); ?>
+                    </p>
+                <?php elseif ($is_synced && $is_paused): ?>
+                    <p class="status-label" style="color:#dba617;">
+                        <?php
+                        printf(
+                            /* translators: %s: short reason, e.g. "credentials unreadable" */
+                            esc_html__('Paused (%s)', 'dilux-cloud-storage'),
+                            esc_html($pause_label)
+                        );
+                        ?>
+                    </p>
+                    <p class="status-details">
+                        <?php esc_html_e('Files were synced previously, but the plugin cannot reach the cloud right now.', 'dilux-cloud-storage'); ?>
                     </p>
                 <?php else: ?>
                     <p class="status-label status-inactive"><?php esc_html_e('Not Synced', 'dilux-cloud-storage'); ?></p>
@@ -112,7 +177,7 @@ $cloud_stats = $cloud_stats ?? null;
                         }
                         ?>
                     </p>
-                    <?php if ($is_configured): ?>
+                    <?php if ($is_configured && !$is_paused): ?>
                         <a href="<?php echo esc_url(admin_url('admin.php?page=dilux-cloud-storage&tab=sync')); ?>" class="button button-primary button-small">
                             <?php esc_html_e('Start Sync', 'dilux-cloud-storage'); ?>
                         </a>
@@ -122,16 +187,32 @@ $cloud_stats = $cloud_stats ?? null;
         </div>
 
         <!-- Offloading Status -->
-        <div class="status-card <?php echo $is_offloading ? 'status-success' : 'status-neutral'; ?>">
+        <?php
+        $off_card_mode = ($is_offloading && !$is_paused) ? 'status-success' : ($is_offloading && $is_paused ? 'status-warning' : 'status-neutral');
+        ?>
+        <div class="status-card <?php echo esc_attr($off_card_mode); ?>">
             <div class="status-icon">
                 <span class="dashicons <?php echo $is_offloading ? 'dashicons-superhero' : 'dashicons-database'; ?>"></span>
             </div>
             <div class="status-content">
                 <h3><?php esc_html_e('Offloading', 'dilux-cloud-storage'); ?></h3>
-                <?php if ($is_offloading): ?>
+                <?php if ($is_offloading && !$is_paused): ?>
                     <p class="status-label status-active"><?php esc_html_e('Active', 'dilux-cloud-storage'); ?></p>
                     <p class="status-details">
                         <?php esc_html_e('Files served from cloud storage', 'dilux-cloud-storage'); ?>
+                    </p>
+                <?php elseif ($is_offloading && $is_paused): ?>
+                    <p class="status-label" style="color:#dba617;">
+                        <?php
+                        printf(
+                            /* translators: %s: short reason, e.g. "credentials unreadable" */
+                            esc_html__('Paused (%s)', 'dilux-cloud-storage'),
+                            esc_html($pause_label)
+                        );
+                        ?>
+                    </p>
+                    <p class="status-details">
+                        <?php esc_html_e('Falling back to local storage for new uploads.', 'dilux-cloud-storage'); ?>
                     </p>
                 <?php else: ?>
                     <p class="status-label status-inactive"><?php esc_html_e('Inactive', 'dilux-cloud-storage'); ?></p>
@@ -157,30 +238,51 @@ $cloud_stats = $cloud_stats ?? null;
                 <h3><?php esc_html_e('Plugin State', 'dilux-cloud-storage'); ?></h3>
                 <p class="status-label">
                     <?php
+                    $badge_class = 'state-gray';
+                    $badge_label = $plugin_state;
                     switch ($plugin_state) {
                         case PluginState::NOT_CONFIGURED:
-                            echo '<span class="state-badge state-gray">' . esc_html__('Not Configured', 'dilux-cloud-storage') . '</span>';
+                            $badge_class = 'state-gray';
+                            $badge_label = __('Not Configured', 'dilux-cloud-storage');
                             break;
                         case PluginState::CONFIGURED:
-                            echo '<span class="state-badge state-blue">' . esc_html__('Configured', 'dilux-cloud-storage') . '</span>';
+                            $badge_class = 'state-blue';
+                            $badge_label = __('Configured', 'dilux-cloud-storage');
                             break;
                         case PluginState::SYNCING:
-                            echo '<span class="state-badge state-yellow">' . esc_html__('Syncing', 'dilux-cloud-storage') . '</span>';
+                            $badge_class = 'state-yellow';
+                            $badge_label = __('Syncing', 'dilux-cloud-storage');
                             break;
                         case PluginState::SYNCED:
-                            echo '<span class="state-badge state-green">' . esc_html__('Synced', 'dilux-cloud-storage') . '</span>';
+                            $badge_class = 'state-green';
+                            $badge_label = __('Synced', 'dilux-cloud-storage');
                             break;
                         case PluginState::OFFLOADING_ACTIVE:
-                            echo '<span class="state-badge state-purple">' . esc_html__('Offloading Active', 'dilux-cloud-storage') . '</span>';
+                            $badge_class = 'state-purple';
+                            $badge_label = __('Offloading Active', 'dilux-cloud-storage');
                             break;
-                        default:
-                            echo '<span class="state-badge state-gray">' . esc_html($plugin_state) . '</span>';
                     }
+                    if ($is_paused) {
+                        $badge_class .= ' is-paused';
+                    }
+                    echo '<span class="state-badge ' . esc_attr($badge_class) . '">' . esc_html($badge_label) . '</span>';
                     ?>
                 </p>
-                <p class="status-details">
-                    <?php esc_html_e('Current operational mode', 'dilux-cloud-storage'); ?>
-                </p>
+                <?php if ($is_paused): ?>
+                    <p class="status-details" style="color:#856404;">
+                        <?php
+                        printf(
+                            /* translators: %s: short reason, e.g. "credentials unreadable" */
+                            esc_html__('Paused (%s) — see banner above.', 'dilux-cloud-storage'),
+                            esc_html($pause_label)
+                        );
+                        ?>
+                    </p>
+                <?php else: ?>
+                    <p class="status-details">
+                        <?php esc_html_e('Current operational mode', 'dilux-cloud-storage'); ?>
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -592,6 +694,13 @@ $cloud_stats = $cloud_stats ?? null;
 .state-badge.state-purple {
     background: #f3e5f5;
     color: #7b1fa2;
+}
+
+/* Greyed-out badge when the connection-health system reports a pause —
+ * the underlying state is preserved but visually de-emphasised because
+ * the feature is not actually working at the moment. */
+.state-badge.is-paused {
+    opacity: 0.5;
 }
 
 /* Quick Links Section */

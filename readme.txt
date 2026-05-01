@@ -138,6 +138,18 @@ Requirements: PHP `ext-openssl` (enabled by default on virtually every host).
 
 == Changelog ==
 
+= 1.0.1 =
+Bug fixes
+* The connection-health system now also fires when stored credentials cannot be **decrypted** (for example after restoring a database from another environment, where the WordPress salts no longer match the ones used to encrypt the credentials at rest). Previously the failure was only written to the debug log; the admin had no visible signal and saw silently inconsistent state across tabs.
+* The red admin banner is now tailored per failure mode (`decrypt_failed`, `401`/`403`, `404`, `exception`) with a clear title, explanation and call to action — no more generic "Cloud Connection Error" for every failure.
+* The **Sync & Offloading** tab no longer shows the misleading "Steps to Enable Sync" copy when the real problem is unreadable credentials. It now distinguishes "never configured" from "credentials cannot be decrypted" and points the admin straight to the Cloud Provider tab to re-enter them.
+* The **Status** tab cards (Plugin State, Configuration, Offloading) no longer show contradictory information (e.g. "Configuration: Not Configured" together with "Offloading: Active") when the connection is unhealthy. All four cards now coherently surface a "paused" state with the same root cause.
+* The **Overview** tab cards apply the same coherence rules: when paused, the Configuration / Synchronization / Offloading cards switch to a warning style with the short pause reason, instead of staying green while the rest of the admin reports the failure.
+
+Internal
+* `ConfigManager::decrypt_credentials()` now records a `decrypt_failed` connection-health event once per failure cycle (idempotent — does not inflate `consecutive_failures` on every page load).
+* New `Admin::pause_reason_short()` and `Admin::health_banner_copy()` helpers map a connection-health `error_code` to the user-facing copy used throughout the admin, so the same vocabulary appears in the banner, the Status cards and the Overview cards.
+
 = 1.0.0 =
 * Initial release.
 * Azure Blob Storage provider — bring-your-own credentials, files served from `https://<your-account-name>.blob.core.windows.net`.
