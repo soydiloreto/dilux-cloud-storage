@@ -354,6 +354,32 @@ class Admin {
                 // Check if sync tab is accessible
                 $is_configured = ConfigManager::is_configured();
                 if (!$is_configured) {
+                    // Distinguish "credentials cannot be decrypted" from
+                    // "never configured": the recovery path is different
+                    // (re-enter creds vs initial setup) and the existing
+                    // "Steps to Enable Sync" copy misleads the user when the
+                    // real problem is unreadable credentials.
+                    $health = ConfigManager::get_connection_health();
+                    $is_decrypt_failure = $health['status'] === 'unhealthy'
+                        && $health['error_code'] === 'decrypt_failed';
+
+                    if ($is_decrypt_failure) {
+                        ?>
+                        <div class="wrap">
+                            <div class="notice notice-error">
+                                <h3><?php \esc_html_e('Stored Credentials Unreadable', 'dilux-cloud-storage'); ?></h3>
+                                <p><?php \esc_html_e('Sync is paused because the saved cloud credentials cannot be decrypted. This is not the same as "never configured" — the cloud provider details are still in the database, but the WordPress salts changed since they were saved (commonly after restoring a database from a different environment).', 'dilux-cloud-storage'); ?></p>
+                                <p><?php \esc_html_e('Re-enter the credentials in the Cloud Provider tab. Everything else (provider selection, container name, sync state) is preserved.', 'dilux-cloud-storage'); ?></p>
+                                <p>
+                                    <a href="?page=dilux-cloud-storage&tab=cloud-provider" class="button button-primary">
+                                        <?php \esc_html_e('Re-enter Credentials', 'dilux-cloud-storage'); ?>
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+                        <?php
+                        return;
+                    }
                     ?>
                     <div class="wrap">
                         <div class="notice notice-warning is-dismissible">
@@ -481,6 +507,87 @@ class Admin {
     }
 
     /**
+     * Short, single-line reason for a health pause. Used inline in the
+     * Status tab cards as a sub-label so each card explains *why* it is
+     * showing "paused" instead of its normal state.
+     *
+     * Mirrors the error_code branches in health_banner_copy() — keep them
+     * in sync if a new error_code is added.
+     *
+     * @param string $error_code Connection-health error_code (e.g. 'decrypt_failed', '403')
+     * @return string Short human label (already translated)
+     */
+    public static function pause_reason_short(string $error_code): string {
+        switch ($error_code) {
+            case 'decrypt_failed':
+                return __('credentials unreadable', 'dilux-cloud-storage');
+            case '401':
+            case '403':
+                return __('permission denied', 'dilux-cloud-storage');
+            case '404':
+                return __('container not found', 'dilux-cloud-storage');
+            case 'exception':
+                return __('connection error', 'dilux-cloud-storage');
+            default:
+                return __('cloud unreachable', 'dilux-cloud-storage');
+        }
+    }
+
+    /**
+     * Build the title / detail / CTA copy for the health banner based on the
+     * recorded `error_code`. Each branch maps a known failure mode to a
+     * tailored message so the user knows exactly what to do.
+     *
+     * Returns an array with keys: title, detail, cta_label.
+     *
+     * @param string $error_code    Code from connection_health (e.g. 'decrypt_failed', '403', 'exception')
+     * @param string $error_message Human-readable message from the failure source
+     * @return array{title:string,detail:string,cta_label:string}
+     */
+    private static function health_banner_copy(string $error_code, string $error_message): array {
+        switch ($error_code) {
+            case 'decrypt_failed':
+                return [
+                    'title'     => __('Stored Credentials Unreadable', 'dilux-cloud-storage'),
+                    'detail'    => __('Your saved cloud credentials cannot be decrypted. This usually means the WordPress salts (AUTH_KEY / SECURE_AUTH_KEY) changed since these credentials were saved — for example after restoring a database from a different environment. Re-enter your credentials to fix this.', 'dilux-cloud-storage'),
+                    'cta_label' => __('Re-enter Credentials', 'dilux-cloud-storage'),
+                ];
+
+            case '401':
+            case '403':
+                return [
+                    'title'     => __('Cloud Permission Denied', 'dilux-cloud-storage'),
+                    'detail'    => __('The cloud provider rejected the credentials. The access key may have been rotated, the SAS token may have expired, or the role assignment is missing. Verify the credentials and re-enter them.', 'dilux-cloud-storage'),
+                    'cta_label' => __('Update Credentials', 'dilux-cloud-storage'),
+                ];
+
+            case '404':
+                return [
+                    'title'     => __('Container Not Found', 'dilux-cloud-storage'),
+                    'detail'    => __('The configured container or bucket does not exist on the cloud provider. Check that the name is spelled correctly and that it has been created.', 'dilux-cloud-storage'),
+                    'cta_label' => __('Open Cloud Provider Settings', 'dilux-cloud-storage'),
+                ];
+
+            case 'exception':
+                return [
+                    'title'     => __('Cloud Connection Error', 'dilux-cloud-storage'),
+                    'detail'    => $error_message !== ''
+                        ? $error_message
+                        : __('An unexpected error occurred while talking to the cloud provider.', 'dilux-cloud-storage'),
+                    'cta_label' => __('Update your credentials in the Cloud Provider tab', 'dilux-cloud-storage'),
+                ];
+
+            default:
+                // Unknown / generic — preserve the existing copy.
+                return [
+                    'title'     => __('Cloud Connection Error', 'dilux-cloud-storage'),
+                    'detail'    => $error_message,
+                    'cta_label' => __('Update your credentials in the Cloud Provider tab', 'dilux-cloud-storage'),
+                ];
+        }
+    }
+
+    /**
      * Render the connection health error banner.
      *
      * @param array $health Connection health data from ConfigManager
@@ -488,6 +595,10 @@ class Admin {
     private static function render_connection_health_banner(array $health): void {
         $current_state = ConfigManager::get_state();
         $is_offloading = ($current_state === 'offloading_active');
+        $copy = self::health_banner_copy(
+            (string) ($health['error_code'] ?? ''),
+            (string) ($health['error_message'] ?? '')
+        );
 
         // Calculate time since last success (only show if > 5 min to avoid
         // confusing "2 minutes ago" when the break just happened)
@@ -517,10 +628,10 @@ class Admin {
                 <span class="dashicons dashicons-warning" style="color: #d63638; font-size: 24px; flex-shrink: 0; margin-top: 2px;"></span>
                 <div>
                     <strong style="color: #721c24; font-size: 15px;">
-                        <?php \esc_html_e('Cloud Connection Error', 'dilux-cloud-storage'); ?>
+                        <?php echo \esc_html($copy['title']); ?>
                     </strong>
                     <p style="margin: 8px 0 0; color: #721c24;">
-                        <?php echo \esc_html($health['error_message']); ?>
+                        <?php echo \esc_html($copy['detail']); ?>
                     </p>
                     <?php if ($last_success_text): ?>
                     <p style="margin: 4px 0 0; color: #856404; font-size: 13px;">
@@ -537,7 +648,7 @@ class Admin {
                     <?php endif; ?>
                     <p style="margin: 8px 0 0; font-size: 13px;">
                         <a href="<?php echo \esc_url(\admin_url('admin.php?page=dilux-cloud-storage&tab=cloud-provider')); ?>" style="color: #721c24; text-decoration: underline;">
-                            <?php \esc_html_e('Update your credentials in the Cloud Provider tab', 'dilux-cloud-storage'); ?>
+                            <?php echo \esc_html($copy['cta_label']); ?>
                         </a>
                     </p>
                 </div>

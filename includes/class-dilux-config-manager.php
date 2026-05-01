@@ -191,6 +191,7 @@ class ConfigManager {
         if (empty($config['provider_config']) || !is_array($config['provider_config'])) {
             return $config;
         }
+        $first_failure_field = null;
         foreach (self::ENCRYPTED_FIELDS as $field) {
             $value = $config['provider_config'][$field] ?? '';
             if (!is_string($value) || $value === '' || !Crypto::is_encrypted($value)) {
@@ -200,10 +201,37 @@ class ConfigManager {
             if ($plain === null) {
                 Logger::error('[Dilux ConfigManager] Failed to decrypt "' . $field . '" — credential will need to be re-entered.');
                 $config['provider_config'][$field] = '';
+                $first_failure_field = $first_failure_field ?? $field;
             } else {
                 $config['provider_config'][$field] = $plain;
             }
         }
+
+        // Surface decrypt failures through the connection-health system so the
+        // existing red banner fires automatically. We use a distinguishable
+        // error_code ('decrypt_failed') so the banner can show a tailored
+        // message ("re-enter your credentials") instead of the generic one.
+        //
+        // Recorded once per failure cycle: while the unhealthy state is
+        // already 'decrypt_failed' we don't bump consecutive_failures on
+        // every page load.
+        if ($first_failure_field !== null) {
+            $health = self::get_connection_health();
+            $already_recorded = $health['status'] === 'unhealthy'
+                && $health['error_code'] === 'decrypt_failed';
+            if (!$already_recorded) {
+                self::record_connection_failure(
+                    'decrypt_failed',
+                    sprintf(
+                        /* translators: %s: provider config field name (e.g. access_key) */
+                        __('Stored credential "%s" cannot be decrypted. WordPress salts may have changed since this credential was saved.', 'dilux-cloud-storage'),
+                        $first_failure_field
+                    ),
+                    'crypto'
+                );
+            }
+        }
+
         return $config;
     }
 

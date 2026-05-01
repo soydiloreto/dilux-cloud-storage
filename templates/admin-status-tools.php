@@ -51,6 +51,17 @@ $is_offloading = ConfigManager::is_offloading_enabled();
 // Get plugin config for basic info
 $plugin_config = ConfigManager::get_config();
 
+// Health context — when the cloud connection is unhealthy (decrypt failure,
+// permission denied, etc.) the cards below switch to "paused" copy so the
+// user does not see contradictory states (e.g. "Offloading: Active" while
+// the underlying credentials are unreadable). The state machine itself is
+// left untouched; we only change how it is *displayed*. The full diagnosis
+// and CTA live in the red banner rendered above this template.
+$health         = ConfigManager::get_connection_health();
+$is_paused      = $health['status'] === 'unhealthy';
+$pause_cause    = (string) ($health['error_code'] ?? '');
+$pause_label    = $is_paused ? Admin::pause_reason_short($pause_cause) : '';
+
 // Section to render: 'status' (default) or 'tools'.
 // Set in class-dilux-admin.php based on the current tab.
 $section = $section ?? 'status';
@@ -96,9 +107,23 @@ $section = $section ?? 'status';
                                 $badge_class = 'state-purple';
                                 break;
                         }
+                        if ($is_paused) {
+                            $badge_class .= ' is-paused';
+                        }
                         echo '<span class="state-badge ' . esc_attr($badge_class) . '">' . esc_html(PluginState::get_state_name($current_state)) . '</span>';
                         ?>
                     </p>
+                    <?php if ($is_paused): ?>
+                    <p class="state-pause-reason" style="margin-top:6px; color:#856404; font-size:12px;">
+                        <?php
+                        printf(
+                            /* translators: %s: short reason, e.g. "credentials unreadable" */
+                            esc_html__('Paused (%s) — see banner above.', 'dilux-cloud-storage'),
+                            esc_html($pause_label)
+                        );
+                        ?>
+                    </p>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -109,16 +134,33 @@ $section = $section ?? 'status';
                 </div>
                 <div class="state-content">
                     <h3><?php esc_html_e('Configuration', 'dilux-cloud-storage'); ?></h3>
+                    <?php
+                    // Vocabulary intentionally identical to admin-overview.php.
+                    // Keep these strings in sync with the Overview tab.
+                    $is_decrypt_failure = $is_paused && $pause_cause === 'decrypt_failed';
+                    ?>
                     <p class="state-value">
-                        <?php if ($is_configured): ?>
+                        <?php if ($is_configured && !$is_paused): ?>
                             <span class="status-indicator status-success"></span>
                             <?php esc_html_e('Configured', 'dilux-cloud-storage'); ?>
+                        <?php elseif ($is_decrypt_failure): ?>
+                            <span class="status-indicator" style="background:#dba617;"></span>
+                            <?php esc_html_e('Awaiting Re-entry', 'dilux-cloud-storage'); ?>
+                        <?php elseif ($is_configured && $is_paused): ?>
+                            <span class="status-indicator" style="background:#dba617;"></span>
+                            <?php
+                            printf(
+                                /* translators: %s: short reason, e.g. "permission denied" */
+                                esc_html__('Paused (%s)', 'dilux-cloud-storage'),
+                                esc_html($pause_label)
+                            );
+                            ?>
                         <?php else: ?>
                             <span class="status-indicator status-inactive"></span>
                             <?php esc_html_e('Not Configured', 'dilux-cloud-storage'); ?>
                         <?php endif; ?>
                     </p>
-                    <?php if ($is_configured && !empty($plugin_config['cloud_provider'])): ?>
+                    <?php if ($is_configured && !$is_paused && !empty($plugin_config['cloud_provider'])): ?>
                         <p class="state-details">
                             <?php
                             echo wp_kses(
@@ -127,6 +169,19 @@ $section = $section ?? 'status';
                                 ['strong' => []]
                             );
                             ?>
+                        </p>
+                    <?php elseif ($is_decrypt_failure): ?>
+                        <p class="state-details" style="color:#856404;">
+                            <?php esc_html_e('Stored credentials cannot be decrypted. See banner above.', 'dilux-cloud-storage'); ?>
+                        </p>
+                        <p class="state-details">
+                            <a href="?page=dilux-cloud-storage&tab=cloud-provider" class="button button-primary button-small">
+                                <?php esc_html_e('Re-enter Credentials', 'dilux-cloud-storage'); ?>
+                            </a>
+                        </p>
+                    <?php elseif ($is_configured && $is_paused): ?>
+                        <p class="state-details" style="color:#856404;">
+                            <?php esc_html_e('See banner above for details.', 'dilux-cloud-storage'); ?>
                         </p>
                     <?php endif; ?>
                 </div>
@@ -140,14 +195,28 @@ $section = $section ?? 'status';
                 <div class="state-content">
                     <h3><?php esc_html_e('Offloading', 'dilux-cloud-storage'); ?></h3>
                     <p class="state-value">
-                        <?php if ($is_offloading): ?>
+                        <?php if ($is_offloading && !$is_paused): ?>
                             <span class="status-indicator status-success"></span>
                             <?php esc_html_e('Active', 'dilux-cloud-storage'); ?>
+                        <?php elseif ($is_offloading && $is_paused): ?>
+                            <span class="status-indicator" style="background:#dba617;"></span>
+                            <?php
+                            printf(
+                                /* translators: %s: short reason, e.g. "credentials unreadable" */
+                                esc_html__('Paused (%s)', 'dilux-cloud-storage'),
+                                esc_html($pause_label)
+                            );
+                            ?>
                         <?php else: ?>
                             <span class="status-indicator status-inactive"></span>
                             <?php esc_html_e('Inactive', 'dilux-cloud-storage'); ?>
                         <?php endif; ?>
                     </p>
+                    <?php if ($is_offloading && $is_paused): ?>
+                    <p class="state-details" style="margin-top:6px; color:#856404; font-size:12px;">
+                        <?php esc_html_e('Falling back to local storage for new uploads.', 'dilux-cloud-storage'); ?>
+                    </p>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -608,6 +677,13 @@ jQuery(document).ready(function($) {
 .state-badge.state-purple {
     background: #f3e5f5;
     color: #7b1fa2;
+}
+
+/* Greyed-out badge when the connection-health system reports a pause —
+ * the underlying state is preserved but visually de-emphasised because
+ * the feature is not actually working at the moment. */
+.state-badge.is-paused {
+    opacity: 0.5;
 }
 
 /* System Info Section */
