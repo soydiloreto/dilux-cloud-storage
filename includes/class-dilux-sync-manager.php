@@ -939,8 +939,6 @@ class SyncManager {
 			}
 
 			curl_multi_remove_handle( $mh, $ch );
-			curl_close( $ch );
-
 			// CRITICAL: Close file handle to free resources
 			if ( isset( $file_handles[ $i ] ) && is_resource( $file_handles[ $i ] ) ) {
 				fclose( $file_handles[ $i ] );
@@ -1069,8 +1067,6 @@ class SyncManager {
 			}
 
 			curl_multi_remove_handle( $mh, $ch );
-			curl_close( $ch );
-
 			// Close file handle
 			if ( isset( $file_handles[ $i ] ) && is_resource( $file_handles[ $i ] ) ) {
 				fclose( $file_handles[ $i ] );

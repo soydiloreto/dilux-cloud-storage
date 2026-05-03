@@ -353,8 +353,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * @return array|false ['size' => int, 'md5' => string, 'last_modified' => string] or false if not found
 	 */
 	public function get_file_info( string $remote_path ) {
-		$fileInfo = $this->get_file_info_dto( $remote_path );
-		return $fileInfo ? $fileInfo->toArray() : false;
+		$file_info = $this->get_file_info_dto( $remote_path );
+		return $file_info ? $file_info->toArray() : false;
 	}
 
 	/**
@@ -567,14 +567,14 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * @return array Array of file info: [['path' => string, 'size' => int, 'md5' => string], ...]
 	 */
 	public function list_files( string $prefix = 'uploads/' ): array {
-		$fileInfos = $this->list_files_dto( $prefix );
+		$file_infos = $this->list_files_dto( $prefix );
 
 		// Convert FileInfo[] to array[]
 		return array_map(
-			function ( FileInfo $fileInfo ) {
-				return $fileInfo->toArray();
+			function ( FileInfo $file_info ) {
+				return $file_info->toArray();
 			},
-			$fileInfos
+			$file_infos
 		);
 	}
 
@@ -1054,8 +1054,6 @@ class AzureProvider implements CloudStorageClientInterface {
 				$response   = curl_exec( $ch );
 				$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 				$curl_error = curl_error( $ch );
-				curl_close( $ch );
-
 				if ( $http_code !== 201 ) {
 					fclose( $fp );
 					$error_msg = "Failed to upload block {$block_index}: HTTP {$http_code}";

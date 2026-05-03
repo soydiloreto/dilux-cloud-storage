@@ -21,6 +21,7 @@
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fread
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
  * phpcs:disable WordPress.WP.AlternativeFunctions.unlink_unlink
+ * phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged
  *
  * Architecture:
  *   WordPress Plugin --SAS token--> Azure Blob Storage (direct, no proxy)
@@ -415,7 +416,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					$response   = curl_exec( $ch );
 					$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 					$curl_error = curl_error( $ch );
-					curl_close( $ch );
 					fclose( $fh );
 
 					if ( $http_code === 201 ) {
@@ -494,7 +494,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					curl_exec( $ch );
 					$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 					$curl_error = curl_error( $ch );
-					curl_close( $ch );
 					fclose( $fh );
 
 					if ( $http_code === 200 ) {
@@ -559,8 +558,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 
 					curl_exec( $ch );
 					$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-					curl_close( $ch );
-
 					if ( $http_code === 403 ) {
 						throw new \Exception( 'HTTP 403' );
 					}
@@ -604,8 +601,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 
 					$response  = curl_exec( $ch );
 					$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-					curl_close( $ch );
-
 					if ( $http_code === 403 ) {
 						throw new \Exception( 'HTTP 403' );
 					}
@@ -655,8 +650,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 
 					$response  = curl_exec( $ch );
 					$http_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-					curl_close( $ch );
-
 					if ( $http_code === 403 ) {
 						throw new \Exception( 'HTTP 403' );
 					}
@@ -679,8 +672,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 						$last_modified = trim( $m[1] );
 					}
 
-					$fileInfo = new FileInfo( $remote_path, $size, $md5, $last_modified );
-					return $fileInfo->toArray();
+					$file_info = new FileInfo( $remote_path, $size, $md5, $last_modified );
+					return $file_info->toArray();
 				}
 			);
 		} catch ( \Exception $e ) {
@@ -719,8 +712,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					curl_exec( $ch );
 					$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 					$curl_error = curl_error( $ch );
-					curl_close( $ch );
-
 					if ( $http_code === 202 ) {
 						return array(
 							'success' => true,
@@ -785,8 +776,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					curl_exec( $ch );
 					$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 					$curl_error = curl_error( $ch );
-					curl_close( $ch );
-
 					if ( $http_code === 202 ) {
 						return array(
 							'success' => true,
@@ -1069,8 +1058,6 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 				$response   = curl_exec( $ch );
 				$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 				$curl_error = curl_error( $ch );
-				curl_close( $ch );
-
 				if ( $http_code !== 201 ) {
 					fclose( $fp );
 					$error_msg = "Failed to upload block $block_index: HTTP $http_code";

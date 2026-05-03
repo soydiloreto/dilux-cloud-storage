@@ -11,6 +11,7 @@
  *
  * phpcs:disable WordPress.WP.AlternativeFunctions.unlink_unlink
  * phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+ * phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged
  *
  * Why this is needed:
  * - Imagick can't handle diluxcloud:// paths directly for saving images
