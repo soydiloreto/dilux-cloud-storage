@@ -997,6 +997,10 @@ class Admin {
 				);
 			}
 
+			if ( $client === null ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Could not instantiate cloud client for the selected provider.', 'dilux-cloud-storage' ) ) );
+			}
+
 			$result = $client->test_connection();
 
 			if ( $result['success'] ) {

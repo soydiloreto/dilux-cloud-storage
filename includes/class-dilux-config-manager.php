@@ -444,9 +444,10 @@ class ConfigManager {
 			if ( $verbose ) {
                 // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace -- Diagnostic info only logged when verbose logging is explicitly enabled.
 				$backtrace   = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 3 );
-				$caller      = isset( $backtrace[1] ) ? $backtrace[1]['function'] : 'unknown';
-				$caller_file = isset( $backtrace[1] ) ? basename( $backtrace[1]['file'] ) : 'unknown';
-				$caller_line = isset( $backtrace[1] ) ? $backtrace[1]['line'] : 'unknown';
+				$frame       = $backtrace[1] ?? array();
+				$caller      = $frame['function'] ?? 'unknown';
+				$caller_file = isset( $frame['file'] ) ? basename( $frame['file'] ) : 'unknown';
+				$caller_line = $frame['line'] ?? 'unknown';
 
 				Logger::info( '[Dilux ConfigManager] State changed: ' . $old_state . ' → ' . $state . ' (called from ' . $caller . ' in ' . $caller_file . ':' . $caller_line . ')' );
 			} else {
