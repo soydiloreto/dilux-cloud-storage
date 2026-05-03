@@ -19,6 +19,9 @@
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fread
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+ * phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged
  *
  * @package DiluxWP\CloudStorage\Providers
  * @since 1.0.0
@@ -44,7 +47,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Implementation of CloudStorageClientInterface for Azure Blob Storage.
  */
-
 class AzureProvider implements CloudStorageClientInterface {
 
 	/** @var string */
@@ -663,6 +665,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $prefix Filter by prefix (e.g., 'uploads/')
 	 * @return FileInfo[] Array of FileInfo objects
+	 *
+	 * @throws \Exception When the Azure REST call fails after all retries.
 	 */
 	private function list_files_dto( string $prefix = 'uploads/' ): array {
 		$max_retries = 3;

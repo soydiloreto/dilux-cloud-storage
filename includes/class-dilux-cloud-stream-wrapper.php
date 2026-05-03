@@ -36,7 +36,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Custom stream wrapper that redirects file operations to cloud storage.
  * This is the core component that makes WordPress write directly to cloud.
  */
-
 class CloudStreamWrapper {
 
 	/** @var string Protocol name */
@@ -112,7 +111,7 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public static function unregister() {
-		if ( in_array( self::PROTOCOL, stream_get_wrappers() ) ) {
+		if ( in_array( self::PROTOCOL, stream_get_wrappers(), true ) ) {
 			$unregistered = stream_wrapper_unregister( self::PROTOCOL );
 
 			if ( $unregistered ) {

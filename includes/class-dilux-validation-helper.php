@@ -66,6 +66,8 @@ class DiluxValidationHelper {
 
 	/**
 	 * Determina si la operación requiere validación multi-tab
+	 *
+	 * @param mixed $operation_type
 	 */
 	private static function requires_multi_tab_check( $operation_type ) {
 		return in_array(
@@ -84,6 +86,8 @@ class DiluxValidationHelper {
 
 	/**
 	 * Valida que no haya otro tab controlando la sync
+	 *
+	 * @param mixed $requesting_session_id
 	 */
 	private static function validate_multi_tab( $requesting_session_id ) {
 		$sync_meta = get_option( 'dilux_cs_sync_meta', array() );
@@ -164,6 +168,8 @@ class DiluxValidationHelper {
 
 	/**
 	 * Valida el estado del plugin según la operación
+	 *
+	 * @param mixed $operation_type
 	 */
 	private static function validate_plugin_state( $operation_type ) {
 		$current_state = ConfigManager::get_state();
@@ -222,6 +228,8 @@ class DiluxValidationHelper {
 
 	/**
 	 * Valida el estado de los archivos según la operación
+	 *
+	 * @param mixed $operation_type
 	 */
 	private static function validate_files_state( $operation_type ) {
 		if ( $operation_type !== 'enable_offloading' ) {

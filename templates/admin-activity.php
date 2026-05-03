@@ -20,6 +20,7 @@ use DiluxWP\CloudStorage\ConfigManager;
 // Read-only filter inputs for the activity-log table. The page is reachable
 // only by users with manage_options; these $_GET reads do not change state.
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only filters; no state change.
+// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- $per_page is a local template variable, not a WordPress global; the rule false-positives because WP also has a $per_page global of the same name in the admin-list-table context.
 $per_page     = 50;
 $current_page = isset( $_GET['paged'] ) ? max( 1, intval( wp_unslash( $_GET['paged'] ) ) ) : 1;
 $offset       = ( $current_page - 1 ) * $per_page;
@@ -327,7 +328,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 
 								<td class="column-date">
 									<abbr title="<?php echo esc_attr( mysql2date( 'c', $log['created_at'] ) ); ?>">
-										<?php echo esc_html( human_time_diff( strtotime( $log['created_at'] ), current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'dilux-cloud-storage' ) ); ?>
+										<?php echo esc_html( human_time_diff( strtotime( $log['created_at'] ), time() ) . ' ' . __( 'ago', 'dilux-cloud-storage' ) ); ?>
 									</abbr>
 								</td>
 								

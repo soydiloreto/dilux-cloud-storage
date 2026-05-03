@@ -58,7 +58,7 @@ class ProviderConfig {
 	 *
 	 * @param array $post POST data from form
 	 * @return self
-	 * @throws \InvalidArgumentException
+	 * @throws \InvalidArgumentException When required POST fields are missing or invalid.
 	 */
 	public static function fromPost( array $post ): self {
 		$cloud_provider = sanitize_text_field( $post['cloud_provider'] ?? '' );

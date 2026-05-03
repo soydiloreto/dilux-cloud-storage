@@ -28,7 +28,7 @@ class CloudStorageFactory {
 	 * @param string $provider Provider name (azure, aws, etc.)
 	 * @param array  $config Configuration array
 	 * @return CloudStorageClientInterface|null
-	 * @throws Exception If provider is not supported
+	 * @throws \Exception When the provider name is not supported or not yet implemented.
 	 */
 	public static function create( $provider, $config = array() ) {
 		switch ( strtolower( $provider ) ) {

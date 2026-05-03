@@ -808,6 +808,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $remote_path Prefix filter (default: 'uploads/')
 	 * @return array Array of file info arrays
+	 *
+	 * @throws \Exception When the Dilux One / Azure REST call fails after all retries.
 	 */
 	public function list_files( string $remote_path = 'uploads/' ): array {
 		$max_retries = 3;

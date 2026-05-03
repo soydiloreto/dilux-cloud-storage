@@ -68,6 +68,7 @@ class SyncStatus {
 	 * Check if sync is finished (completed, failed, or cancelled)
 	 *
 	 * @return bool
+	 * @param string $status
 	 */
 	public static function isFinished( string $status ): bool {
 		return in_array( $status, array( self::COMPLETED, self::FAILED, self::CANCELLED ), true );

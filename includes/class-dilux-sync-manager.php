@@ -118,17 +118,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - DB write size: ~100 bytes/batch (vs 5MB before)
  * - System stability: No MySQL crashes, no PHP-FPM saturation
  */
-
 class SyncManager {
 
 	/** @var mixed */
 	private $cloud_client;
 	/** @var mixed */
 	private $upload_dir;
-	/** @var mixed */
-	private $batch_size        = 100; // Files per batch - OPTIMIZED: Dynamic based on concurrency (will be calculated)
-	private $parallel_uploads  = 5; // Concurrent uploads using cURL Multi - DEFAULT: Can be changed via UI
-	private $chunked_threshold = 10485760; // 10MB - Files larger than this use chunked upload
+	/** @var int Files per batch — recalculated dynamically based on concurrency. */
+	private $batch_size = 100;
+	/** @var int Concurrent uploads using cURL Multi — default; configurable via UI. */
+	private $parallel_uploads = 5;
+	/** @var int Files larger than this threshold (bytes) use chunked upload. */
+	private $chunked_threshold = 10485760;
 
 	/**
 	 * Set parallel uploads level (concurrency)
@@ -263,6 +264,19 @@ class SyncManager {
 		);
 	}
 
+	/**
+	 * Start the initial synchronization (or retry the failed-files subset).
+	 *
+	 * Reads progress from ConfigManager and processes files in batches via
+	 * the configured cloud client. Does NOT block on completion — returns
+	 * after kicking off the first batch; subsequent batches are driven by
+	 * the AJAX progress endpoint.
+	 *
+	 * @param bool $retry_failed When true, only re-uploads files marked
+	 *                           failed in DiluxDB; the regular sync queue
+	 *                           is skipped.
+	 * @return array{success:bool,message:string,total_files?:int} Status envelope.
+	 */
 	public function start_sync( $retry_failed = false ) {
 		Logger::info( '[Dilux SyncManager] start_sync() called with retry_failed=' . ( $retry_failed ? 'true' : 'false' ) );
 
@@ -1113,10 +1127,13 @@ class SyncManager {
 	 * @param array $progress
 	 * @return array
 	 * @param mixed $sync_meta
+	 * @param mixed $sync_meta
 	 */
 	/**
 	 * Complete sync using new DB table architecture
 	 * ⭐ NEW: Works with custom DB table
+	 *
+	 * @param mixed $sync_meta
 	 */
 	private function complete_sync_v2( $sync_meta ) {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -1546,6 +1563,8 @@ class SyncManager {
 
 	/**
 	 * Complete reverse sync
+	 *
+	 * @param mixed $sync_meta
 	 */
 	private function complete_reverse_sync( $sync_meta ) {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -1581,6 +1600,16 @@ class SyncManager {
 		);
 	}
 
+	/**
+	 * Mark the current sync session as complete and persist final stats.
+	 *
+	 * Updates the in-memory progress array with terminal status and
+	 * timestamps, then writes it back via ConfigManager. Caller decides
+	 * what to do with the returned progress envelope.
+	 *
+	 * @param array $progress Current progress envelope to finalize.
+	 * @return array Updated progress envelope with status='completed'.
+	 */
 	private function complete_sync( $progress ) {
 		$progress['status']       = 'completed';
 		$progress['current_file'] = '';

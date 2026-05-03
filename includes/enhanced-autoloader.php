@@ -1,8 +1,13 @@
 <?php
 /**
- * Autoloader for Dilux WP Cloud Storage
+ * Autoloader for Dilux WP Cloud Storage.
  *
- * Loads plugin classes
+ * Loads plugin classes from includes/ via a custom mapping that supports
+ * both legacy WP-style filenames (`class-dilux-foo.php`) and modern
+ * PSR-12 PascalCase filenames (`Foo.php`). Both styles coexist in the
+ * codebase by design.
+ *
+ * @package DiluxWP\CloudStorage
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,6 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Autoloader function
+ *
+ * @param mixed $class_name
  */
 function dilux_cs_autoloader( $class_name ) {
 	// Only autoload our classes
@@ -74,7 +81,8 @@ function dilux_cs_autoloader( $class_name ) {
 
 		if ( file_exists( $file_path ) ) {
 			require_once $file_path;
-			// error_log('[Dilux Autoloader] Loaded: ' . $class_name . ' from ' . $file_path);
+			// Verbose autoloader trace removed — re-enable temporarily during
+			// classloader debugging only (will spam debug.log on every request).
 			return;
 		}
 	}
