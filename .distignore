@@ -1,0 +1,49 @@
+# Files and directories listed here are excluded from the wp.org SVN deploy
+# (10up/action-wordpress-plugin-deploy reads this file, gitignore-style format).
+# They live in the GitHub repo but never reach the published plugin.
+
+# Repo metadata
+.git
+.github
+.gitignore
+.gitattributes
+.distignore
+.editorconfig
+
+# wp.org listing assets — handled separately by the deploy action (uploaded to
+# SVN /assets/, not /trunk/). Excluding it here prevents duplication in /trunk/.
+.wordpress-org
+
+# Documentation (GitHub-only)
+README.md
+CONTRIBUTING.md
+SECURITY.md
+CODE_OF_CONDUCT.md
+
+# Dev dependencies
+node_modules
+vendor
+package.json
+package-lock.json
+composer.json
+composer.lock
+
+# Dev environment
+.wp-env.json
+.wp-env.override.json
+
+# Linters / tests
+phpcs.xml
+phpcs.xml.dist
+phpunit.xml
+phpunit.xml.dist
+tests
+.phpcs-cache
+
+# IDE
+.idea
+.vscode
+
+# Build artifacts
+*.zip
+*.log
