@@ -60,7 +60,7 @@ class CloudStreamWrapper {
 	/** @var string File mode (r, w, a, etc.) */
 	private $mode = '';
 
-	/** @var CloudStorageClientInterface */
+	/** @var CloudStorageClientInterface|null */
 	private static $cloud_client = null;
 
 	/**
@@ -81,7 +81,7 @@ class CloudStreamWrapper {
 	private static ?string $cloud_host_cache = null;
 
 	/**
-	 * @var array<string, mixed> \Iterator for directory listing
+	 * @var array<string, mixed>|null \Iterator for directory listing
 	 */
 	private $dir_iterator = null;
 
@@ -507,7 +507,10 @@ class CloudStreamWrapper {
 					$result = $cloud_client->download_file( $this->path, $temp_file );
 
 					if ( $result['success'] ) {
-						$this->content = file_get_contents( $temp_file );
+						$buffer = file_get_contents( $temp_file );
+						if ( $buffer !== false ) {
+							$this->content = $buffer;
+						}
 						unlink( $temp_file );
 					}
 				} catch ( \Exception $e ) {

@@ -76,7 +76,10 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 		}
 
 		// ⭐ File is diluxcloud:// - download to temp for GD processing
-		$temp_filename                 = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
+		$temp_filename = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
+		if ( $temp_filename === false ) {
+			return new \WP_Error( 'error_loading_image', __( 'Could not create temp file for cloud download.', 'dilux-cloud-storage' ) );
+		}
 		$this->temp_files_to_cleanup[] = $temp_filename;
 
 		// Copy from diluxcloud:// to local temp
