@@ -47,6 +47,14 @@ jobs:
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: ./
+          # Plugin Check runs against the GitHub repo tree, not against the
+          # zip that gets deployed to wp.org SVN. The two ignored codes below
+          # flag files (.gitignore, .github/) that are excluded from the
+          # wp.org deploy via .distignore — they legitimately exist in the
+          # GitHub repo for development purposes and are NOT shipped to end
+          # users. Other security/performance/accessibility checks remain
+          # active.
+          ignore-codes: hidden_files,github_directory
 
   readme-validation:
     name: Validate readme.txt and version alignment
