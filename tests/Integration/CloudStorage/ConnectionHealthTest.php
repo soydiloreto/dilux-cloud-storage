@@ -85,26 +85,37 @@ class ConnectionHealthTest extends IntegrationTestCase {
 
     public function test_clear_connection_health_removes_the_option_entirely(): void {
         ConfigManager::record_connection_failure('401', 'Unauthorized', 'diluxone');
-        $this->assertNotEmpty(ConfigManager::get_connection_health());
+        $this->assertNotFalse(get_option('dilux_cs_connection_health', false));
 
         ConfigManager::clear_connection_health();
 
-        // After clear, get_connection_health() returns the default shape
-        // (zeroed counters, empty fields) rather than NULL — that's the
-        // contract callers depend on.
+        // The option row must be DELETED, not merely reset to default
+        // values. Assert directly via get_option() with a sentinel
+        // default — this would still report `false` only when the row
+        // is actually gone (a regression that changed clear() to
+        // update_option(defaults) would fail this).
+        $this->assertFalse(
+            get_option('dilux_cs_connection_health', false),
+            'clear_connection_health() must delete the wp_options row, not just reset its values.'
+        );
+
+        // The accessor's contract: even after the option is deleted,
+        // get_connection_health() returns the default-shape array (not
+        // null) so callers don't need to null-check.
         $health = ConfigManager::get_connection_health();
         $this->assertSame(0, $health['consecutive_failures']);
         $this->assertSame('', $health['error_code']);
-        // Status defaults vary by implementation; assert it's a string,
-        // not the lack of any state.
         $this->assertIsString($health['status']);
     }
 
     public function test_consecutive_failures_can_cross_stream_wrapper_fallback_threshold(): void {
         // Stream wrapper falls back to local storage when consecutive_failures
-        // >= 3 (see CloudStreamWrapper line 596). This test documents that
-        // contract — if the threshold is ever changed, this test fails and
-        // the change is caught.
+        // crosses the >= 3 threshold (see CloudStreamWrapper, the branch
+        // that compares ($health['consecutive_failures'] ?? 0) >= 3 inside
+        // its hot-path read/write methods). This test documents the
+        // threshold contract — if it ever changes, this test fails and the
+        // change is caught in review. Line numbers intentionally not
+        // referenced because they drift.
         for ($i = 0; $i < 4; $i++) {
             ConfigManager::record_connection_failure('500', 'Server Error #' . $i, 'azure');
         }
