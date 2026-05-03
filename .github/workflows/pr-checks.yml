@@ -47,13 +47,18 @@ jobs:
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: ./
+          # Run all categories Plugin Check supports, including experimental
+          # checks. Strict mode — we want to be more rigorous than wp.org
+          # itself, so issues are caught here before they ever land on
+          # wp.org's review queue.
+          categories: plugin_repo,security,performance,accessibility,general
+          include-experimental: true
           # Plugin Check runs against the GitHub repo tree, not against the
-          # zip that gets deployed to wp.org SVN. The two ignored codes below
-          # flag files (.gitignore, .github/) that are excluded from the
-          # wp.org deploy via .distignore — they legitimately exist in the
-          # GitHub repo for development purposes and are NOT shipped to end
-          # users. Other security/performance/accessibility checks remain
-          # active.
+          # zip deployed to wp.org SVN. These codes flag files (.gitignore,
+          # .github/) that are excluded from the deploy via .distignore —
+          # they legitimately exist in the GitHub repo for development
+          # purposes and are NOT shipped to end users. Other security /
+          # performance / accessibility / general checks remain active.
           ignore-codes: hidden_files,github_directory
 
   readme-validation:
