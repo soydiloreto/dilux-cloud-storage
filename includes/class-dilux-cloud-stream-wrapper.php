@@ -4,7 +4,7 @@
  *
  * This file IS a PHP stream wrapper implementation. It must operate at the native
  * filesystem layer (fopen/fread/fwrite/fclose/unlink) on temporary files outside
- * of /wp-content/uploads/, so the WP_Filesystem abstraction cannot be used here.
+ * of /wp-content/uploads/, so the \WP_Filesystem abstraction cannot be used here.
  * Likewise, trigger_error() is required by the stream wrapper protocol so that
  * callers like fopen() can detect errors. These rules are intentionally suppressed
  * file-wide:
@@ -80,7 +80,7 @@ class CloudStreamWrapper {
 	private static ?string $cloud_host_cache = null;
 
 	/**
-	 * @var array<string, mixed> Iterator for directory listing
+	 * @var array<string, mixed> \Iterator for directory listing
 	 */
 	private $dir_iterator = null;
 

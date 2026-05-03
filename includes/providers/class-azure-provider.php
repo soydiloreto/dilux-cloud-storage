@@ -7,7 +7,7 @@
  * (wp_remote_*) does not support streamed request bodies, so cURL is required
  * for the actual file transfer here. WP HTTP API IS used for everything else
  * (auth probes, metadata, list, delete). Filesystem operations operate on local
- * temporary files outside /wp-content/uploads/, so WP_Filesystem does not apply.
+ * temporary files outside /wp-content/uploads/, so \WP_Filesystem does not apply.
  * These rules are intentionally suppressed file-wide:
  *
  * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_init
@@ -1222,7 +1222,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	/**
 	 * Extract HTTP error code from exception message.
 	 *
-	 * @param string $message Exception message
+	 * @param string $message \Exception message
 	 * @return string Error code (e.g. '403', '401', 'network')
 	 */
 	private function extract_error_code( string $message ): string {
