@@ -756,7 +756,6 @@ class CloudStreamWrapper {
 			return fstat( $this->handle );
 		}
 
-		return $this->url_stat( $this->path, 0 );
 	}
 
 	/**
@@ -770,7 +769,6 @@ class CloudStreamWrapper {
 		}
 
 		// For write mode (content buffer)
-		return $this->position >= strlen( $this->content );
 	}
 
 	/**
@@ -814,7 +812,6 @@ class CloudStreamWrapper {
 		}
 
 		// For write mode (content buffer)
-		return $this->position;
 	}
 
 	/**

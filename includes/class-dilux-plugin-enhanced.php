@@ -219,7 +219,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		$result = $this->sync_manager->start_sync();
@@ -243,7 +242,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Process batch if sync is active
@@ -278,7 +276,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Get parameters
@@ -305,7 +302,6 @@ class Plugin {
 					'details'           => $validation['details'],
 				)
 			);
-			return;
 		}
 
 		// ⭐ Validación OK
@@ -377,7 +373,6 @@ class Plugin {
 					),
 				)
 			);
-			return;
 		}
 
 		// ⭐ SEGUNDA VEZ: Usuario confirmó → ejecutar acción
@@ -435,7 +430,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// ⭐ FIXED: Restore concurrency level from metadata
@@ -462,7 +456,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Get parameters
@@ -497,7 +490,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// ⭐ OPTIMIZED: Restore concurrency level from metadata (same as normal sync)
@@ -524,7 +516,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Compare with cloud (no pagination needed)
@@ -573,7 +564,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		try {
@@ -584,7 +574,6 @@ class Plugin {
 
 			if ( ! $cloud_client ) {
 				wp_send_json_error( esc_html__( 'Cloud client not configured', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// List all files from Azure
@@ -600,7 +589,6 @@ class Plugin {
 						'message'   => 'No files in cloud',
 					)
 				);
-				return;
 			}
 
 			Logger::info( '[Dilux Plugin] Found ' . count( $azure_files ) . ' files in Azure, checking against DB...' );
@@ -709,7 +697,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		try {
@@ -790,7 +777,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		try {
@@ -900,7 +886,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		if ( CloudStreamWrapper::activate_offloading() ) {
@@ -922,7 +907,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		if ( CloudStreamWrapper::deactivate_offloading() ) {
@@ -953,7 +937,6 @@ class Plugin {
 
 		if ( ! defined( 'DILUX_DEV_MODE' ) || ! DILUX_DEV_MODE ) {
 			wp_send_json_error( esc_html__( 'DILUX_DEV_MODE is not enabled', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		$current_state = ConfigManager::get_state();
@@ -1000,7 +983,6 @@ class Plugin {
 
 		if ( ! defined( 'DILUX_DEV_MODE' ) || ! DILUX_DEV_MODE ) {
 			wp_send_json_error( esc_html__( 'DILUX_DEV_MODE is not enabled', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		$current_state = ConfigManager::get_state();
@@ -1043,7 +1025,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		ConfigManager::set_state( PluginState::CONFIGURED );
@@ -1314,7 +1295,6 @@ class Plugin {
 
 			if ( empty( $new_session_id ) ) {
 				wp_send_json_error( esc_html__( 'Session ID is required', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// Get current sync metadata
@@ -1322,7 +1302,6 @@ class Plugin {
 
 			if ( empty( $sync_meta ) ) {
 				wp_send_json_error( esc_html__( 'No active sync found', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			$old_session_id = $sync_meta['sync_session_id'] ?? 'unknown';
@@ -1393,7 +1372,6 @@ class Plugin {
 						)
 					);
 				}
-				return;
 			}
 
 			$current_session_id = $sync_meta['sync_session_id'] ?? '';
@@ -1417,7 +1395,6 @@ class Plugin {
 						'last_heartbeat_age' => time() - $last_heartbeat,
 					)
 				);
-				return;
 			}
 
 			// Check if sync is terminated (completed, completed_with_errors, or failed)

@@ -964,13 +964,11 @@ class Admin {
 		if ( ! $nonce_verified ) {
 			Logger::error( '[Dilux CS] Security check failed. Available POST fields: ' . implode( ', ', array_keys( $_POST ) ) );
 			wp_send_json_error( array( 'message' => esc_html__( 'Security check failed', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Check user permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Detect provider type
@@ -981,7 +979,6 @@ class Admin {
 				$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
 				if ( empty( $api_key ) ) {
 					wp_send_json_error( array( 'message' => esc_html__( 'API Key is required', 'dilux-cloud-storage' ) ) );
-					return;
 				}
 				$client = \DiluxWP\CloudStorage\Factories\CloudStorageFactory::create(
 					'diluxone',
@@ -996,7 +993,6 @@ class Admin {
 
 				if ( empty( $account_name ) || empty( $account_key ) || empty( $container_name ) ) {
 					wp_send_json_error( array( 'message' => esc_html__( 'Missing required fields', 'dilux-cloud-storage' ) ) );
-					return;
 				}
 				$client = \DiluxWP\CloudStorage\Factories\CloudStorageFactory::create(
 					'azure',
@@ -1072,13 +1068,11 @@ class Admin {
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		$client = ConfigManager::get_cloud_client();
 		if ( ! $client ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Cloud client not available', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1089,7 +1083,6 @@ class Admin {
 				$stats = $client->get_container_stats( true );
 			} else {
 				wp_send_json_error( array( 'message' => esc_html__( 'Unknown provider type', 'dilux-cloud-storage' ) ) );
-				return;
 			}
 
 			if ( $stats['success'] ) {
@@ -1113,14 +1106,12 @@ class Admin {
 		// Check user permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Validate that connection test passed
 		$test_data = get_transient( 'dilux_cs_connection_test_passed_' . get_current_user_id() );
 		if ( ! $test_data ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'You must test the connection first', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		$provider = sanitize_text_field( wp_unslash( $_POST['provider'] ?? '' ) );
@@ -1133,7 +1124,6 @@ class Admin {
 			if ( ( $test_data['provider'] ?? '' ) !== 'diluxone' ||
 				( $test_data['api_key_prefix'] ?? '' ) !== substr( $api_key, 0, 12 ) ) {
 				wp_send_json_error( array( 'message' => esc_html__( 'Credentials do not match tested values. Please test again.', 'dilux-cloud-storage' ) ) );
-				return;
 			}
 
 			// Preserve cdn_base_url from existing config
@@ -1154,7 +1144,6 @@ class Admin {
 			if ( ( $test_data['account_name'] ?? '' ) !== $account_name ||
 				( $test_data['container_name'] ?? '' ) !== $container_name ) {
 				wp_send_json_error( array( 'message' => esc_html__( 'Credentials do not match tested values. Please test again.', 'dilux-cloud-storage' ) ) );
-				return;
 			}
 
 			$provider_data = array(
@@ -1275,7 +1264,6 @@ class Admin {
 
 		if ( empty( $action ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'No action specified', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Legacy endpoint - MigrationTools class was removed.
@@ -1305,7 +1293,6 @@ class Admin {
 
 		if ( empty( $check_type ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'No check type specified', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1346,7 +1333,6 @@ class Admin {
 				default:
 					/* translators: %s: requested check type identifier */
 					wp_send_json_error( array( 'message' => sprintf( esc_html__( 'Invalid check type: %s', 'dilux-cloud-storage' ), $check_type ) ) );
-					return;
 			}
 
 			wp_send_json_success(
@@ -1536,7 +1522,6 @@ class Admin {
 						'message' => __( 'Offloading must be active before deleting local files', 'dilux-cloud-storage' ),
 					)
 				);
-				return;
 			}
 
 			// Get all synced files from DB
@@ -1550,7 +1535,6 @@ class Admin {
 						'message' => __( 'No synced files found to delete', 'dilux-cloud-storage' ),
 					)
 				);
-				return;
 			}
 
 			// Get upload directory base path
@@ -1688,7 +1672,6 @@ class Admin {
 					'message'           => __( 'Cannot cancel sync: Another tab is currently syncing', 'dilux-cloud-storage' ),
 				)
 			);
-			return;
 		}
 
 		try {
@@ -1880,7 +1863,6 @@ class Admin {
 		// Check permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1936,7 +1918,6 @@ class Admin {
 		// Check permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1949,7 +1930,6 @@ class Admin {
 
 			if ( empty( $config_json ) ) {
 				wp_send_json_error( __( 'No configuration data provided', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// Decode JSON
@@ -1957,12 +1937,10 @@ class Admin {
 
 			if ( json_last_error() !== JSON_ERROR_NONE ) {
 				wp_send_json_error( __( 'Invalid JSON format: ', 'dilux-cloud-storage' ) . json_last_error_msg() );
-				return;
 			}
 
 			if ( empty( $config_data ) || ! is_array( $config_data ) ) {
 				wp_send_json_error( __( 'Invalid configuration data', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			Logger::info( '[Dilux CS] Importing configuration with ' . count( $config_data ) . ' options' );
@@ -1977,7 +1955,6 @@ class Admin {
 
 			if ( $dilux_options_count === 0 ) {
 				wp_send_json_error( __( 'No valid Dilux Cloud Storage options found in import data', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// Import each option
