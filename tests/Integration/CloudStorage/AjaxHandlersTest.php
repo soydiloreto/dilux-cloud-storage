@@ -24,12 +24,19 @@ class AjaxHandlersTest extends IntegrationTestCase {
     protected function setUp(): void {
         parent::setUp();
 
-        // Create an admin user so capability checks succeed.
-        $this->admin_user_id = wp_insert_user([
+        // Create an admin user so capability checks succeed. wp_insert_user
+        // returns WP_Error on failure (e.g. username collision); guard the
+        // typed int property assignment so we get a readable failure message
+        // rather than a TypeError further down the test.
+        $created = wp_insert_user([
             'user_login' => 'test_admin_' . wp_generate_password(6, false),
             'user_pass'  => wp_generate_password(12),
             'role'       => 'administrator',
         ]);
+        if (is_wp_error($created)) {
+            $this->fail('wp_insert_user (admin) failed: ' . $created->get_error_message());
+        }
+        $this->admin_user_id = (int) $created;
 
         // Reset request globals between tests.
         $_POST = [];
@@ -58,11 +65,15 @@ class AjaxHandlersTest extends IntegrationTestCase {
     }
 
     public function test_ajax_handler_rejects_without_capability(): void {
-        $subscriber_id = wp_insert_user([
+        $created = wp_insert_user([
             'user_login' => 'test_subscriber_' . wp_generate_password(6, false),
             'user_pass'  => wp_generate_password(12),
             'role'       => 'subscriber',
         ]);
+        if (is_wp_error($created)) {
+            $this->fail('wp_insert_user (subscriber) failed: ' . $created->get_error_message());
+        }
+        $subscriber_id = (int) $created;
         wp_set_current_user($subscriber_id);
 
         // Subscriber CAN create the same nonce — capabilities are

@@ -40,10 +40,12 @@ if (empty($_SERVER['REQUEST_URI'])) {
     $_SERVER['REQUEST_URI'] = '/';
 }
 
-// 3. Resolve the plugin directory inside the container. wp-env mounts the
-//    repo at /var/www/html/wp-content/plugins/<slug>/. We derive the slug
-//    dynamically rather than hardcoding it.
-$plugin_dir_in_container = '/var/www/html/wp-content/plugins/dilux-cloud-storage';
+// 3. Resolve the plugin directory dynamically. This bootstrap file lives at
+//    <plugin-root>/tests/bootstrap-integration.php — inside the wp-env tests
+//    container that resolves to /var/www/html/wp-content/plugins/<slug>/tests/,
+//    so dirname(__DIR__) gives the plugin root regardless of the slug. This
+//    keeps the bootstrap working if the plugin folder is ever renamed.
+$plugin_dir_in_container = dirname(__DIR__);
 
 // 4. Load WordPress (this loads the plugin since it's activated).
 $wp_load = '/var/www/html/wp-load.php';
