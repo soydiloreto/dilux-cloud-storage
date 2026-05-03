@@ -73,14 +73,63 @@ We follow [Semantic Versioning](https://semver.org/) for the plugin's public ver
 
 Repository-only changes (this CONTRIBUTING.md, CI workflows, dev tooling, etc.) **do not** trigger a version bump — they are excluded from the wp.org deploy via [`.distignore`](.distignore) and are invisible to end users.
 
+### `-dev` suffix on `main`
+
+The `Version:` header in `dilux-cloud-storage.php` (and the
+`DILUX_CS_VERSION` constant alongside it) carry a **`-dev` suffix on
+`main`** to signal that the working tree is in active development and
+not a tagged release. The pattern matches what Symfony, Laravel,
+WordPress core, npm packages, and most other professional open-source
+projects use:
+
+| Where | Looks like | Means |
+|---|---|---|
+| `main` between releases | `Version: 1.2.0-dev` | "Working towards 1.2.0; this is NOT a release" |
+| Final release commit | `Version: 1.2.0` | "This commit IS the 1.2.0 release; tag it" |
+| Tag (e.g. `1.2.0`) | snapshot of the release commit | What ends up at wp.org and on user sites |
+| `main` after release | `Version: 1.3.0-dev` | "Now working towards 1.3.0" |
+
+Why: a developer who clones `main` between releases sees `1.2.0-dev`
+and immediately knows they are NOT looking at the published version.
+Without the suffix, the same clone would show `1.2.0`, indistinguishable
+from the actual published 1.2.0 release.
+
+The `Stable tag:` in `readme.txt` does NOT carry the suffix — it always
+holds the **last published release version** (or, before any release,
+the next intended one). The CI's version-alignment check accepts this
+asymmetry: it strips the suffix from the PHP `Version:` header before
+comparing to `Stable tag`.
+
+Concretely:
+
+- Open a PR that adds a feature: leave `Version: 1.2.0-dev` alone.
+- When ready to release: in a final "release prep" PR, change
+  `Version: 1.2.0-dev` → `Version: 1.2.0` (drop the suffix), update
+  `Stable tag: 1.2.0` if needed, add the `= 1.2.0 =` changelog entry.
+- Push the tag `1.2.0` after merge — the deploy workflow handles wp.org.
+- In a follow-up PR, bump `Version: 1.3.0-dev` (or whatever the next
+  planned release is) on `main`.
+
+Accepted pre-release suffixes are `-dev`, `-alpha`, `-beta`, `-rc`
+(optionally followed by `.N`). All four signal "not a release" to the
+CI version-alignment rule and to humans reading the file.
+
 ## Releasing (maintainers only)
 
 Release flow is documented for maintainers. Briefly:
 
 1. All PRs targeting the next release are merged into `main`.
-2. The maintainer bumps `Version:` in `dilux-cloud-storage.php`, `Stable tag:` in `readme.txt`, and adds a `== Changelog ==` entry.
-3. The maintainer creates and pushes a git tag matching the version (bare number, no `v` prefix — e.g. `1.2.0`).
-4. The GitHub Action `deploy.yml` automatically pushes the release to wp.org SVN and uploads a zip to GitHub Releases.
+2. The maintainer drops the `-dev` suffix in `dilux-cloud-storage.php`
+   (`Version:` header and `DILUX_CS_VERSION` constant), updates
+   `Stable tag:` in `readme.txt` if needed, and adds a `== Changelog ==`
+   entry. This is typically a single small "release prep" PR.
+3. The maintainer creates and pushes a git tag matching the version
+   (bare number, no `v` prefix — e.g. `1.2.0`).
+4. The GitHub Action `deploy.yml` automatically pushes the release to
+   wp.org SVN and uploads a zip to GitHub Releases.
+5. After the release lands on wp.org, the maintainer opens another PR
+   that bumps `Version:` to `1.3.0-dev` (or whatever the next intended
+   release is) so `main` reflects "in development" again.
 
 ## Code of Conduct
 

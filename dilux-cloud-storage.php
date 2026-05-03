@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Dilux Cloud Storage
  * Description: Offload WordPress media files to Azure Blob Storage or Dilux One Cloud — complete replacement for /uploads/ directory using stream wrappers.
- * Version: 1.1.0
+ * Version: 1.1.0-dev
  * Author: Pablo Ariel Di Loreto
  * Author URI: https://pablodiloreto.com/
  * License: GPLv2 or later
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants
-define( 'DILUX_CS_VERSION', '1.1.0' );
+define( 'DILUX_CS_VERSION', '1.1.0-dev' );
 define( 'DILUX_CS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DILUX_CS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'DILUX_CS_PLUGIN_FILE', __FILE__ );
