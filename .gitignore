@@ -20,3 +20,6 @@ build/
 # Local env
 .env
 .env.local
+
+# wp-env local override (machine-specific dev config)
+.wp-env.override.json
