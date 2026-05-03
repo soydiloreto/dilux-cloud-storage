@@ -39,6 +39,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Validate Stable tag === PHP Version (STRICT, no -dev suffix)
+        # On main between releases the plugin's PHP Version: header carries
+        # a -dev suffix (e.g. `1.1.0-dev`) while readme.txt's Stable tag
+        # holds the last-published version. That asymmetry is fine for PRs.
+        # AT TAG TIME however, wp.org and Plugin Check require exact
+        # equality. This step enforces the strict alignment so a release
+        # never gets pushed to SVN with a mismatch — preventing the wp.org
+        # listing showing a stale "current version".
+        run: |
+          set -e
+          tag="${GITHUB_REF#refs/tags/}"
+          stable_tag=$(grep -oP '^Stable tag:\s*\K\S+' readme.txt)
+          php_version=$(grep -oP '^\s*\*\s*Version:\s*\K\S+' dilux-cloud-storage.php)
+          define_version=$(grep -oP "DILUX_CS_VERSION',\s*'\K[^']+" dilux-cloud-storage.php)
+
+          echo "Tag being deployed:          ${tag}"
+          echo "readme.txt Stable tag:       ${stable_tag}"
+          echo "PHP file Version header:     ${php_version}"
+          echo "PHP file DILUX_CS_VERSION:   ${define_version}"
+
+          fail=0
+          if [ "${stable_tag}" != "${tag}" ]; then
+            echo "::error::Stable tag (${stable_tag}) does not match the git tag (${tag}). Update readme.txt's 'Stable tag:' header to ${tag} before tagging."
+            fail=1
+          fi
+          if [ "${php_version}" != "${tag}" ]; then
+            echo "::error file=dilux-cloud-storage.php::PHP Version header (${php_version}) does not match the git tag (${tag}). Drop any -dev/-alpha/-rc suffix and update Version: to ${tag} before tagging."
+            fail=1
+          fi
+          if [ "${define_version}" != "${tag}" ]; then
+            echo "::error file=dilux-cloud-storage.php::DILUX_CS_VERSION constant (${define_version}) does not match the git tag (${tag}). Update the constant to ${tag} before tagging."
+            fail=1
+          fi
+          if [ "${fail}" -ne 0 ]; then
+            echo "::error::Aborting deploy. The release-prep PR must drop pre-release suffixes from PHP and align all three version markers (Stable tag, Version, DILUX_CS_VERSION) to the tag value."
+            exit 1
+          fi
+
+          echo "All version markers aligned at ${tag}. Proceeding with SVN deploy."
+
       - name: WordPress Plugin Deploy
         id: deploy
         uses: 10up/action-wordpress-plugin-deploy@stable

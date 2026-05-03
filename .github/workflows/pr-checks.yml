@@ -72,7 +72,17 @@ jobs:
           #   CODE_OF_CONDUCT.md (Plugin Check only expects readme.txt and
           #   maybe README.md — but it doesn't expect the rest of the
           #   community profile, all of which is excluded from the deploy)
-          ignore-codes: hidden_files,github_directory,unexpected_markdown_file
+          # - stable_tag_mismatch: Plugin Check requires exact equality
+          #   between readme.txt's Stable tag and the plugin file's
+          #   Version: header. We use a `-dev` suffix on `main` between
+          #   releases (Symfony / Laravel / WP-core convention), so during
+          #   PR runs the two diverge by design. Our own readme-validation
+          #   step (below) enforces the relaxed check (Stable tag must
+          #   equal the BASE part of Version, suffix stripped) and the
+          #   deploy workflow re-runs the strict check at tag time. So at
+          #   release time the alignment IS enforced, just not on every
+          #   PR during development.
+          ignore-codes: hidden_files,github_directory,unexpected_markdown_file,stable_tag_mismatch
 
   readme-validation:
     name: Validate readme.txt and version alignment
