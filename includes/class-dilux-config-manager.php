@@ -686,7 +686,7 @@ class ConfigManager {
 	 *
 	 * @param array $config
 	 */
-	private static function update_state_from_config( $config ) {
+	private static function update_state_from_config( $config ): void {
 		$current_state = self::get_state();
 
 		// If we just configured the plugin for the first time

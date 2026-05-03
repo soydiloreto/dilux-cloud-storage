@@ -223,7 +223,7 @@ class CloudStreamWrapper {
 	 *
 	 * Inspired by Infinite Uploads but improved to cover more cases.
 	 */
-	private static function setup_admin_hooks() {
+	private static function setup_admin_hooks(): void {
 		// Disable cloud offloading during WordPress core, plugin, and theme updates/installations
 		add_action( 'load-update.php', array( __CLASS__, 'tear_down' ) );           // General updates page
 		add_action( 'load-update-core.php', array( __CLASS__, 'tear_down' ) );      // WordPress core updates
@@ -239,7 +239,7 @@ class CloudStreamWrapper {
 	 *
 	 * Called automatically by load-* hooks during admin operations.
 	 */
-	public static function tear_down() {
+	public static function tear_down(): void {
 		remove_filter( 'upload_dir', array( __CLASS__, 'filter_upload_dir' ) );
 		Logger::warning( '[Dilux CloudStreamWrapper] Temporarily disabled upload_dir filter for plugin/theme/core operation' );
 	}

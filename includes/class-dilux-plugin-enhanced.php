@@ -80,7 +80,7 @@ class Plugin {
 	 * Check and update database table version
 	 * Auto-creates or upgrades table on version mismatch
 	 */
-	private function check_and_update_database() {
+	private function check_and_update_database(): void {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
 		$current_version = get_option( DiluxDB::TABLE_VERSION_OPTION, '0' );
@@ -95,7 +95,7 @@ class Plugin {
 	/**
 	 * Initialize new architecture
 	 */
-	private function init_new_architecture() {
+	private function init_new_architecture(): void {
 		// Comentado para reducir logs
 		// Logger::log('[Dilux Plugin] Initializing NEW architecture', 'info');
 
@@ -169,7 +169,7 @@ class Plugin {
 	/**
 	 * Activate stream wrapper for cloud offloading
 	 */
-	private function activate_stream_wrapper() {
+	private function activate_stream_wrapper(): void {
 		if ( CloudStreamWrapper::activate_offloading() ) {
 			Logger::info( '[Dilux Plugin] Stream wrapper activated' );
 
@@ -210,7 +210,7 @@ class Plugin {
 	/**
 	 * AJAX: Start synchronization
 	 */
-	public function ajax_start_sync() {
+	public function ajax_start_sync(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -555,7 +555,7 @@ class Plugin {
 	 * Like Infinite Uploads ajax_remote_filelist - runs before disconnect
 	 * Finds files in Azure that are not in DB and marks them as deleted=1
 	 */
-	public function ajax_cs_scan_remote() {
+	public function ajax_cs_scan_remote(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -898,7 +898,7 @@ class Plugin {
 	/**
 	 * AJAX: Deactivate offloading
 	 */
-	public function ajax_deactivate_offloading() {
+	public function ajax_deactivate_offloading(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1037,7 +1037,7 @@ class Plugin {
 	 * ⭐ AJAX: Prepare complete resync (clear DB and set state to CONFIGURED)
 	 * The scan + populate will happen automatically when user clicks "Start Sync" (same flow as first sync)
 	 */
-	public function ajax_cs_prepare_resync() {
+	public function ajax_cs_prepare_resync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1150,7 +1150,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Process delete batch (delete ALL local files in batches)
 	 * Uses DB-first approach like Infinite Uploads (faster, no filesystem scan)
 	 */
-	public function ajax_cs_process_delete_batch() {
+	public function ajax_cs_process_delete_batch(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {

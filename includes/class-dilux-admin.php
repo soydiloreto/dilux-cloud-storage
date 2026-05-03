@@ -31,7 +31,7 @@ class Admin {
 	/**
 	 * Initialize admin hooks
 	 */
-	public static function init() {
+	public static function init(): void {
 		Logger::debug( '[Dilux CS] Admin::init() called - registering hooks' );
 		\add_action( 'admin_menu', array( __CLASS__, 'add_admin_menu' ) );
 		\add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
@@ -82,7 +82,7 @@ class Admin {
 	/**
 	 * Render the admin page (called dynamically by Dilux One Core)
 	 */
-	public static function render_admin_page() {
+	public static function render_admin_page(): void {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing parameter, no state change.
 		$current_tab = isset( $_GET['tab'] ) ? \sanitize_text_field( wp_unslash( $_GET['tab'] ?? '' ) ) : 'overview';
 
@@ -145,7 +145,7 @@ class Admin {
 	/**
 	 * Register settings
 	 */
-	public static function register_settings() {
+	public static function register_settings(): void {
 		\register_setting(
 			'dilux_cloud_storage',
 			'dilux_cloud_storage_config',
@@ -219,7 +219,7 @@ class Admin {
 	 *
 	 * @param mixed $hook_suffix
 	 */
-	public static function enqueue_admin_assets( $hook_suffix ) {
+	public static function enqueue_admin_assets( $hook_suffix ): void {
 		// Only load on our plugin pages
 		if ( strpos( $hook_suffix, 'dilux-cloud-storage' ) === false ) {
 			return;
@@ -271,7 +271,7 @@ class Admin {
 	 *
 	 * @param mixed $current_tab
 	 */
-	private static function render_tab_content( $current_tab ) {
+	private static function render_tab_content( $current_tab ): void {
 		$template_path = '';
 		$template_data = array();
 
@@ -816,7 +816,7 @@ class Admin {
 	 * @throws \Exception When PluginSettings/ProviderConfig validation fails inside
 	 *                   the inner try blocks (caught and converted to error notices).
 	 */
-	public static function save_config() {
+	public static function save_config(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'dilux_cs_save_config' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -951,7 +951,7 @@ class Admin {
 	/**
 	 * AJAX handler for testing connection
 	 */
-	public static function ajax_test_connection() {
+	public static function ajax_test_connection(): void {
 
 		// Check nonce for security - try different nonce field names
 		$nonce_verified = false;
@@ -1808,7 +1808,7 @@ class Admin {
 	/**
 	 * AJAX: Resync all files (re-scan and upload missing files)
 	 */
-	public static function ajax_resync_all() {
+	public static function ajax_resync_all(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}

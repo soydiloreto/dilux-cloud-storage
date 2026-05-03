@@ -137,7 +137,7 @@ class SyncManager {
 	 *
 	 * @param int $level Number of parallel uploads (3-40)
 	 */
-	public function set_parallel_uploads( $level ) {
+	public function set_parallel_uploads( $level ): void {
 		$level = intval( $level );
 		if ( $level >= 3 && $level <= 40 ) {
 			$this->parallel_uploads = $level;
@@ -192,7 +192,7 @@ class SyncManager {
 	 *
 	 * @param string $message
 	 */
-	private function debug_log( $message ) {
+	private function debug_log( $message ): void {
 		if ( $this->is_debug_enabled() ) {
 			Logger::info( '[Dilux Debug] ' . $message );
 		}

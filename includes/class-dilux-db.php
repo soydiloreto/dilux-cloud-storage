@@ -52,7 +52,7 @@ class DiluxDB {
 	 * Create/update files table
 	 * Called on plugin activation and version checks
 	 */
-	public static function create_files_table() {
+	public static function create_files_table(): void {
 		global $wpdb;
 
 		$table_name      = self::get_table_name();
