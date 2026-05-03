@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Dilux Cloud Storage
  * Description: Offload WordPress media files to Azure Blob Storage or Dilux One Cloud — complete replacement for /uploads/ directory using stream wrappers.
- * Version: 1.1.0
+ * Version: 1.1.0-dev
  * Author: Pablo Ariel Di Loreto
  * Author URI: https://pablodiloreto.com/
  * License: GPLv2 or later
@@ -16,15 +16,15 @@
  * @package DiluxWP\CloudStorage
  */
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 // Plugin constants
-define('DILUX_CS_VERSION', '1.1.0');
-define('DILUX_CS_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('DILUX_CS_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('DILUX_CS_PLUGIN_FILE', __FILE__);
+define( 'DILUX_CS_VERSION', '1.1.0-dev' );
+define( 'DILUX_CS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'DILUX_CS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'DILUX_CS_PLUGIN_FILE', __FILE__ );
 
 // Load enhanced autoloader
 require_once DILUX_CS_PLUGIN_DIR . 'includes/enhanced-autoloader.php';
@@ -42,25 +42,31 @@ global $dilux_cs_plugin;
  * @return void
  */
 function dilux_cs_init() {
-    global $dilux_cs_plugin;
+	global $dilux_cs_plugin;
 
-    $dilux_cs_plugin = Plugin::get_instance();
-    $dilux_cs_plugin->init();
+	$dilux_cs_plugin = Plugin::get_instance();
+	$dilux_cs_plugin->init();
 }
-add_action('plugins_loaded', 'dilux_cs_init', 10);
+add_action( 'plugins_loaded', 'dilux_cs_init', 10 );
 
 /**
  * Plugin activation hook.
  */
-register_activation_hook(__FILE__, function() {
-    \DiluxWP\CloudStorage\Logger::log('[Dilux WP Cloud Storage] Activation hook fired.', 'info', true);
-    Plugin::activate();
-});
+register_activation_hook(
+	__FILE__,
+	function () {
+		\DiluxWP\CloudStorage\Logger::log( '[Dilux WP Cloud Storage] Activation hook fired.', 'info', true );
+		Plugin::activate();
+	}
+);
 
 /**
  * Plugin deactivation hook.
  */
-register_deactivation_hook(__FILE__, function() {
-    \DiluxWP\CloudStorage\Logger::log('[Dilux WP Cloud Storage] Deactivation hook fired.', 'info', true);
-    Plugin::deactivate();
-});
+register_deactivation_hook(
+	__FILE__,
+	function () {
+		\DiluxWP\CloudStorage\Logger::log( '[Dilux WP Cloud Storage] Deactivation hook fired.', 'info', true );
+		Plugin::deactivate();
+	}
+);

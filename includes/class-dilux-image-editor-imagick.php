@@ -23,154 +23,164 @@
 
 namespace DiluxWP\CloudStorage;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
+
+/**
+ * Imagick image editor that handles diluxcloud:// paths via temp files.
+ *
+ * Extends the WordPress core Imagick editor so the standard image-resize
+ * pipeline keeps working when offloading is active. WordPress core will
+ * try Imagick first then fall back to GD; both are wired through this
+ * pair (Dilux_Image_Editor_Imagick + Dilux_Image_Editor_GD).
+ */
 class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 
-    /**
-     * Remote filename (diluxcloud:// path)
-     *
-     * @var string
-     */
-    protected $remote_filename = null;
+	/**
+	 * Remote filename (diluxcloud:// path)
+	 *
+	 * @var string
+	 */
 
-    /**
-     * Temporary files to cleanup on destruct
-     *
-     * @var array
-     */
-    protected $temp_files_to_cleanup = [];
+	protected $remote_filename = null;
 
-    /**
-     * Load image into Imagick object
-     *
-     * If file is in diluxcloud://, download to temp first, then load.
-     *
-     * @return true|WP_Error True if loaded; WP_Error on failure.
-     */
-    public function load() {
-        if ($this->image instanceof \Imagick) {
-            return true;
-        }
+	/**
+	 * Temporary files to cleanup on destruct
+	 *
+	 * @var array
+	 */
+	protected $temp_files_to_cleanup = array();
 
-        Logger::info('[Dilux Image Editor] load() called for: ' . $this->file);
+	/**
+	 * Load image into Imagick object
+	 *
+	 * If file is in diluxcloud://, download to temp first, then load.
+	 *
+	 * @return true|WP_Error True if loaded; WP_Error on failure.
+	 */
+	public function load() {
+		if ( $this->image instanceof \Imagick ) {
+			return true;
+		}
 
-        if (!is_file($this->file) && !preg_match('|^https?://|', $this->file)) {
-            Logger::error('[Dilux Image Editor] File does not exist: ' . $this->file);
-            return new \WP_Error('error_loading_image', __('File doesn&#8217;t exist?', 'dilux-cloud-storage'), $this->file);
-        }
+		Logger::info( '[Dilux Image Editor] load() called for: ' . $this->file );
 
-        $upload_dir = wp_upload_dir();
+		if ( ! is_file( $this->file ) && ! preg_match( '|^https?://|', $this->file ) ) {
+			Logger::error( '[Dilux Image Editor] File does not exist: ' . $this->file );
+			return new \WP_Error( 'error_loading_image', __( 'File doesn&#8217;t exist?', 'dilux-cloud-storage' ), $this->file );
+		}
 
-        // If file is NOT in our stream wrapper, use parent load
-        if (strpos($this->file, $upload_dir['basedir']) !== 0) {
-            Logger::info('[Dilux Image Editor] Not our stream wrapper, using parent load');
-            return parent::load();
-        }
+		$upload_dir = wp_upload_dir();
 
-        // ⭐ File is diluxcloud:// - download to temp for Imagick processing
-        Logger::info('[Dilux Image Editor] File is in diluxcloud://, creating temp');
-        $temp_filename = tempnam(get_temp_dir(), 'dilux-cloud-storage');
-        $this->temp_files_to_cleanup[] = $temp_filename;
+		// If file is NOT in our stream wrapper, use parent load
+		if ( strpos( $this->file, $upload_dir['basedir'] ) !== 0 ) {
+			Logger::info( '[Dilux Image Editor] Not our stream wrapper, using parent load' );
+			return parent::load();
+		}
 
-        // Copy from diluxcloud:// to local temp
-        Logger::info('[Dilux Image Editor] Copying from ' . $this->file . ' to ' . $temp_filename);
-        $copy_result = copy($this->file, $temp_filename);
+		// ⭐ File is diluxcloud:// - download to temp for Imagick processing
+		Logger::info( '[Dilux Image Editor] File is in diluxcloud://, creating temp' );
+		$temp_filename                 = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
+		$this->temp_files_to_cleanup[] = $temp_filename;
 
-        if (!$copy_result) {
-            Logger::error('[Dilux Image Editor] FAILED to copy file!');
-            @unlink($temp_filename);
-            return new \WP_Error('unable-to-copy-from-cloud', __('Unable to copy file from cloud', 'dilux-cloud-storage'));
-        }
+		// Copy from diluxcloud:// to local temp
+		Logger::info( '[Dilux Image Editor] Copying from ' . $this->file . ' to ' . $temp_filename );
+		$copy_result = copy( $this->file, $temp_filename );
 
-        Logger::info('[Dilux Image Editor] Copy successful, temp size: ' . filesize($temp_filename));
+		if ( ! $copy_result ) {
+			Logger::error( '[Dilux Image Editor] FAILED to copy file!' );
+			@unlink( $temp_filename );
+			return new \WP_Error( 'unable-to-copy-from-cloud', __( 'Unable to copy file from cloud', 'dilux-cloud-storage' ) );
+		}
 
-        // Store remote path and switch to temp
-        $this->remote_filename = $this->file;
-        $this->file = $temp_filename;
+		Logger::info( '[Dilux Image Editor] Copy successful, temp size: ' . filesize( $temp_filename ) );
 
-        // Load from temp file
-        $result = parent::load();
+		// Store remote path and switch to temp
+		$this->remote_filename = $this->file;
+		$this->file            = $temp_filename;
 
-        // Restore remote path
-        $this->file = $this->remote_filename;
+		// Load from temp file
+		$result = parent::load();
 
-        return $result;
-    }
+		// Restore remote path
+		$this->file = $this->remote_filename;
 
-    /**
-     * Save image to diluxcloud:// path
-     *
-     * Imagick can't save directly to diluxcloud://, so:
-     * 1. Save to temp file
-     * 2. Copy temp to diluxcloud:// (triggers stream wrapper upload to Azure)
-     * 3. Delete temp
-     *
-     * @param Imagick $image Imagick object
-     * @param string $filename Output filename
-     * @param string $mime_type Output mime type
-     * @return array|WP_Error Saved file info or error
-     */
-    protected function _save($image, $filename = null, $mime_type = null) {
-        list($filename, $extension, $mime_type) = $this->get_output_format($filename, $mime_type);
+		return $result;
+	}
 
-        if (!$filename) {
-            $filename = $this->generate_filename(null, null, $extension);
-        }
+	/**
+	 * Save image to diluxcloud:// path
+	 *
+	 * Imagick can't save directly to diluxcloud://, so:
+	 * 1. Save to temp file
+	 * 2. Copy temp to diluxcloud:// (triggers stream wrapper upload to Azure)
+	 * 3. Delete temp
+	 *
+	 * @param Imagick $image Imagick object
+	 * @param string  $filename Output filename
+	 * @param string  $mime_type Output mime type
+	 * @return array|WP_Error Saved file info or error
+	 */
+	protected function _save( $image, $filename = null, $mime_type = null ) {
+		list($filename, $extension, $mime_type) = $this->get_output_format( $filename, $mime_type );
 
-        $upload_dir = wp_upload_dir();
+		if ( ! $filename ) {
+			$filename = $this->generate_filename( null, null, $extension );
+		}
 
-        // Only use temp file if saving to our stream wrapper
-        if (strpos($filename, $upload_dir['basedir']) === 0) {
-            $temp_filename = tempnam(get_temp_dir(), 'dilux-cloud-storage');
-        } else {
-            // Not our stream wrapper, use parent directly
-            return parent::_save($image, $filename, $mime_type);
-        }
+		$upload_dir = wp_upload_dir();
 
-        // Save to temp file first
-        $save = parent::_save($image, $temp_filename, $mime_type);
+		// Only use temp file if saving to our stream wrapper
+		if ( strpos( $filename, $upload_dir['basedir'] ) === 0 ) {
+			$temp_filename = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
+		} else {
+			// Not our stream wrapper, use parent directly
+			return parent::_save( $image, $filename, $mime_type );
+		}
 
-        if (is_wp_error($save)) {
-            @unlink($temp_filename);
-            return $save;
-        }
+		// Save to temp file first
+		$save = parent::_save( $image, $temp_filename, $mime_type );
 
-        // Copy temp to diluxcloud:// (triggers upload to Azure)
-        $copy_result = copy($save['path'], $filename);
+		if ( is_wp_error( $save ) ) {
+			@unlink( $temp_filename );
+			return $save;
+		}
 
-        // Clean up temp files
-        @unlink($save['path']);
-        @unlink($temp_filename);
+		// Copy temp to diluxcloud:// (triggers upload to Azure)
+		$copy_result = copy( $save['path'], $filename );
 
-        if (!$copy_result) {
-            return new \WP_Error(
-                'unable-to-copy-to-cloud',
-                __('Unable to copy the temp image to the cloud', 'dilux-cloud-storage')
-            );
-        }
+		// Clean up temp files
+		@unlink( $save['path'] );
+		@unlink( $temp_filename );
 
-        return [
-            'path'      => $filename,
-            'file'      => wp_basename(apply_filters('image_make_intermediate_size', $filename)),
-            'width'     => $this->size['width'],
-            'height'    => $this->size['height'],
-            'mime-type' => $mime_type,
-        ];
-    }
+		if ( ! $copy_result ) {
+			return new \WP_Error(
+				'unable-to-copy-to-cloud',
+				__( 'Unable to copy the temp image to the cloud', 'dilux-cloud-storage' )
+			);
+		}
 
-    /**
-     * Cleanup temp files on destruct
-     */
-    public function __destruct() {
-        // Clean up all temp files
-        foreach ($this->temp_files_to_cleanup as $temp_file) {
-            if (file_exists($temp_file)) {
-                @unlink($temp_file);
-            }
-        }
+		return array(
+			'path'      => $filename,
+			'file'      => wp_basename( apply_filters( 'image_make_intermediate_size', $filename ) ),
+			'width'     => $this->size['width'],
+			'height'    => $this->size['height'],
+			'mime-type' => $mime_type,
+		);
+	}
 
-        parent::__destruct();
-    }
+	/**
+	 * Cleanup temp files on destruct
+	 */
+	public function __destruct() {
+		// Clean up all temp files
+		foreach ( $this->temp_files_to_cleanup as $temp_file ) {
+			if ( file_exists( $temp_file ) ) {
+				@unlink( $temp_file );
+			}
+		}
+
+		parent::__destruct();
+	}
 }

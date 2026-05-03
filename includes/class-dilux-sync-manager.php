@@ -42,8 +42,8 @@ use DiluxWP\CloudStorage\DTOs\SyncProgress;
 use DiluxWP\CloudStorage\DTOs\SyncFilter;
 use DiluxWP\CloudStorage\DTOs\SyncResult;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -118,1478 +118,1510 @@ if (!defined('ABSPATH')) {
  * - DB write size: ~100 bytes/batch (vs 5MB before)
  * - System stability: No MySQL crashes, no PHP-FPM saturation
  */
+
 class SyncManager {
 
-    private $cloud_client;
-    private $upload_dir;
-    private $batch_size = 100; // Files per batch - OPTIMIZED: Dynamic based on concurrency (will be calculated)
-    private $parallel_uploads = 5; // Concurrent uploads using cURL Multi - DEFAULT: Can be changed via UI
-    private $chunked_threshold = 10485760; // 10MB - Files larger than this use chunked upload
+	/** @var mixed */
+	private $cloud_client;
+	/** @var mixed */
+	private $upload_dir;
+	/** @var mixed */
+	private $batch_size        = 100; // Files per batch - OPTIMIZED: Dynamic based on concurrency (will be calculated)
+	private $parallel_uploads  = 5; // Concurrent uploads using cURL Multi - DEFAULT: Can be changed via UI
+	private $chunked_threshold = 10485760; // 10MB - Files larger than this use chunked upload
 
-    /**
-     * Set parallel uploads level (concurrency)
-     * ⭐ OPTIMIZED: Increased max from 12 to 40, batch_size adjusts dynamically
-     *
-     * @param int $level Number of parallel uploads (3-40)
-     */
-    public function set_parallel_uploads($level) {
-        $level = intval($level);
-        if ($level >= 3 && $level <= 40) {
-            $this->parallel_uploads = $level;
+	/**
+	 * Set parallel uploads level (concurrency)
+	 * ⭐ OPTIMIZED: Increased max from 12 to 40, batch_size adjusts dynamically
+	 *
+	 * @param int $level Number of parallel uploads (3-40)
+	 */
+	public function set_parallel_uploads( $level ) {
+		$level = intval( $level );
+		if ( $level >= 3 && $level <= 40 ) {
+			$this->parallel_uploads = $level;
 
-            // ⭐ DYNAMIC BATCH SIZE: concurrency * 5 (min 25, max 200)
-            // Reduced from *10 to *5 for more frequent progress updates
-            $this->batch_size = max(25, min(200, $level * 5));
+			// ⭐ DYNAMIC BATCH SIZE: concurrency * 5 (min 25, max 200)
+			// Reduced from *10 to *5 for more frequent progress updates
+			$this->batch_size = max( 25, min( 200, $level * 5 ) );
 
-            Logger::info('[Dilux Sync] Concurrency set to: ' . $level . ', batch_size: ' . $this->batch_size);
-        }
-    }
-    
-    /**
-     * Constructor
-     */
-    public function __construct() {
-        $this->cloud_client = ConfigManager::get_cloud_client();
-        $this->upload_dir = wp_upload_dir();
-    }
+			Logger::info( '[Dilux Sync] Concurrency set to: ' . $level . ', batch_size: ' . $this->batch_size );
+		}
+	}
 
-    /**
-     * Check if debug logging is enabled
-     *
-     * @return bool
-     */
-    private function is_debug_enabled() {
-        $config = ConfigManager::get_config();
-        return !empty($config['enable_debug_logging']) || !empty($config['debug_enabled']);
-    }
+	/**
+	 * Constructor
+	 */
+	public function __construct() {
+		$this->cloud_client = ConfigManager::get_cloud_client();
+		$this->upload_dir   = wp_upload_dir();
+	}
 
-    /**
-     * Get sync filter from current configuration
-     *
-     * @return SyncFilter
-     */
-    private function get_sync_filter(): SyncFilter {
-        $config = ConfigManager::get_config();
+	/**
+	 * Check if debug logging is enabled
+	 *
+	 * @return bool
+	 */
+	private function is_debug_enabled() {
+		$config = ConfigManager::get_config();
+		return ! empty( $config['enable_debug_logging'] ) || ! empty( $config['debug_enabled'] );
+	}
 
-        return SyncFilter::fromConfig([
-            'allowed_file_types' => $config['allowed_file_types'] ?? '*',
-            'max_file_size' => $config['max_file_size'] ?? 0,
-            'excluded_paths' => [], // Could be extended to support excluded paths in config
-            'include_hidden_files' => false,
-            'include_system_files' => $config['allowed_file_types'] === '*'
-        ]);
-    }
+	/**
+	 * Get sync filter from current configuration
+	 *
+	 * @return SyncFilter
+	 */
+	private function get_sync_filter(): SyncFilter {
+		$config = ConfigManager::get_config();
 
-    /**
-     * Log debug message (only if debug is enabled)
-     *
-     * @param string $message
-     */
-    private function debug_log($message) {
-        if ($this->is_debug_enabled()) {
-            Logger::info('[Dilux Debug] ' . $message);
-        }
-    }
-    
-    /**
-     * Start initial synchronization
-     * OPTIMIZED: Queue Simple - No guarda files_queue en DB, solo índice
-     *
-     * @return array ['success' => bool, 'message' => string, 'total_files' => int]
-     */
-    /**
-     * Scan local files and populate DB (without starting sync)
-     * Used for calculating files before showing confirmation popup
-     *
-     * @return array Result with success status and total_files count
-     */
-    public function scan_local_files() {
-        if (!$this->cloud_client) {
-            return [
-                'success' => false,
-                'message' => 'Cloud client not configured'
-            ];
-        }
+		return SyncFilter::fromConfig(
+			array(
+				'allowed_file_types'   => $config['allowed_file_types'] ?? '*',
+				'max_file_size'        => $config['max_file_size'] ?? 0,
+				'excluded_paths'       => array(), // Could be extended to support excluded paths in config
+				'include_hidden_files' => false,
+				'include_system_files' => $config['allowed_file_types'] === '*',
+			)
+		);
+	}
 
-        // Scan for files to sync (initial sync - optimized without MD5)
-        $files_to_sync = $this->scan_files_to_sync(true);
+	/**
+	 * Log debug message (only if debug is enabled)
+	 *
+	 * @param string $message
+	 */
+	private function debug_log( $message ) {
+		if ( $this->is_debug_enabled() ) {
+			Logger::info( '[Dilux Debug] ' . $message );
+		}
+	}
 
-        if (empty($files_to_sync)) {
-            return [
-                'success' => true,
-                'message' => 'No files to sync',
-                'total_files' => 0
-            ];
-        }
+	/**
+	 * Start initial synchronization
+	 * OPTIMIZED: Queue Simple - No guarda files_queue en DB, solo índice
+	 *
+	 * @return array ['success' => bool, 'message' => string, 'total_files' => int]
+	 */
+	/**
+	 * Scan local files and populate DB (without starting sync)
+	 * Used for calculating files before showing confirmation popup
+	 *
+	 * @return array Result with success status and total_files count
+	 */
+	public function scan_local_files() {
+		if ( ! $this->cloud_client ) {
+			return array(
+				'success' => false,
+				'message' => 'Cloud client not configured',
+			);
+		}
 
-        // Populate custom DB table
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+		// Scan for files to sync (initial sync - optimized without MD5)
+		$files_to_sync = $this->scan_files_to_sync( true );
 
-        // Clear previous scan data
-        DiluxDB::clear_table();
+		if ( empty( $files_to_sync ) ) {
+			return array(
+				'success'     => true,
+				'message'     => 'No files to sync',
+				'total_files' => 0,
+			);
+		}
 
-        // Add files to tracking table in batches
-        $batch_files = [];
-        foreach ($files_to_sync as $file_info) {
-            $relative_path = str_replace($this->upload_dir['basedir'], '', $file_info['local_path']);
+		// Populate custom DB table
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
-            $batch_files[] = [
-                'path' => $relative_path,
-                'size' => $file_info['size']
-            ];
+		// Clear previous scan data
+		DiluxDB::clear_table();
 
-            if (count($batch_files) >= 500) {
-                DiluxDB::add_files_batch($batch_files);
-                $batch_files = [];
-            }
-        }
+		// Add files to tracking table in batches
+		$batch_files = array();
+		foreach ( $files_to_sync as $file_info ) {
+			$relative_path = str_replace( $this->upload_dir['basedir'], '', $file_info['local_path'] );
 
-        if (!empty($batch_files)) {
-            DiluxDB::add_files_batch($batch_files);
-        }
+			$batch_files[] = array(
+				'path' => $relative_path,
+				'size' => $file_info['size'],
+			);
 
-        Logger::info('[Dilux SyncManager] Scanned ' . count($files_to_sync) . ' files (stored in DB, ready for sync)');
+			if ( count( $batch_files ) >= 500 ) {
+				DiluxDB::add_files_batch( $batch_files );
+				$batch_files = array();
+			}
+		}
 
-        return [
-            'success' => true,
-            'message' => 'Files scanned',
-            'total_files' => count($files_to_sync)
-        ];
-    }
+		if ( ! empty( $batch_files ) ) {
+			DiluxDB::add_files_batch( $batch_files );
+		}
 
-    public function start_sync($retry_failed = false) {
-        Logger::info('[Dilux SyncManager] start_sync() called with retry_failed=' . ($retry_failed ? 'true' : 'false'));
+		Logger::info( '[Dilux SyncManager] Scanned ' . count( $files_to_sync ) . ' files (stored in DB, ready for sync)' );
 
-        $current_state = ConfigManager::get_state();
-        Logger::info('[Dilux SyncManager] Current state: ' . $current_state);
+		return array(
+			'success'     => true,
+			'message'     => 'Files scanned',
+			'total_files' => count( $files_to_sync ),
+		);
+	}
 
-        // ⭐ SPECIAL: Allow retry from 'synced' state
-        $can_start = $retry_failed
-            ? ($current_state === 'synced' || PluginState::can_start_sync($current_state))
-            : PluginState::can_start_sync($current_state);
+	public function start_sync( $retry_failed = false ) {
+		Logger::info( '[Dilux SyncManager] start_sync() called with retry_failed=' . ( $retry_failed ? 'true' : 'false' ) );
 
-        if (!$can_start) {
-            Logger::error('[Dilux SyncManager] Cannot start from state: ' . $current_state);
-            return [
-                'success' => false,
-                'message' => 'Cannot start sync in current state: ' . $current_state
-            ];
-        }
+		$current_state = ConfigManager::get_state();
+		Logger::info( '[Dilux SyncManager] Current state: ' . $current_state );
 
-        Logger::info('[Dilux SyncManager] State check passed!');
+		// ⭐ SPECIAL: Allow retry from 'synced' state
+		$can_start = $retry_failed
+			? ( $current_state === 'synced' || PluginState::can_start_sync( $current_state ) )
+			: PluginState::can_start_sync( $current_state );
 
-        if (!$this->cloud_client) {
-            Logger::info('[Dilux SyncManager] Cloud client not configured');
-            return [
-                'success' => false,
-                'message' => 'Cloud client not configured'
-            ];
-        }
+		if ( ! $can_start ) {
+			Logger::error( '[Dilux SyncManager] Cannot start from state: ' . $current_state );
+			return array(
+				'success' => false,
+				'message' => 'Cannot start sync in current state: ' . $current_state,
+			);
+		}
 
-        Logger::info('[Dilux SyncManager] Checks passed, loading DiluxDB...');
+		Logger::info( '[Dilux SyncManager] State check passed!' );
 
-        // ⭐ NEW: Populate custom DB table instead of wp_options
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+		if ( ! $this->cloud_client ) {
+			Logger::info( '[Dilux SyncManager] Cloud client not configured' );
+			return array(
+				'success' => false,
+				'message' => 'Cloud client not configured',
+			);
+		}
 
-        $total_files = 0;
+		Logger::info( '[Dilux SyncManager] Checks passed, loading DiluxDB...' );
 
-        // ⭐ SPECIAL CASE: Retry failed mode
-        // After reset_failed_files_to_pending(), files have errors=2, synced=0
-        // We need to count them directly instead of using get_stats()
-        if ($retry_failed) {
-            global $wpdb;
-            $table_name = DiluxDB::get_table_name();
+		// ⭐ NEW: Populate custom DB table instead of wp_options
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
-            // Count ALL failed files (synced=0, regardless of error count after reset)
-            $retry_count = (int) $wpdb->get_var("
+		$total_files = 0;
+
+		// ⭐ SPECIAL CASE: Retry failed mode
+		// After reset_failed_files_to_pending(), files have errors=2, synced=0
+		// We need to count them directly instead of using get_stats()
+		if ( $retry_failed ) {
+			global $wpdb;
+			$table_name = DiluxDB::get_table_name();
+
+			// Count ALL failed files (synced=0, regardless of error count after reset)
+			$retry_count = (int) $wpdb->get_var(
+				"
                 SELECT COUNT(*) FROM $table_name
                 WHERE synced = 0 AND deleted = 0
-            ");
+            "
+			);
 
-            Logger::info('[Dilux SyncManager] RETRY mode: Found ' . $retry_count . ' files to retry (synced=0)');
+			Logger::info( '[Dilux SyncManager] RETRY mode: Found ' . $retry_count . ' files to retry (synced=0)' );
 
-            if ($retry_count === 0) {
-                ConfigManager::set_state(PluginState::SYNCED);
-                return [
-                    'success' => false,
-                    'message' => 'No failed files to retry',
-                    'total_files' => 0
-                ];
-            }
+			if ( $retry_count === 0 ) {
+				ConfigManager::set_state( PluginState::SYNCED );
+				return array(
+					'success'     => false,
+					'message'     => 'No failed files to retry',
+					'total_files' => 0,
+				);
+			}
 
-            $total_files = $retry_count;
-        } else {
-            // NORMAL MODE: Check if DB already has files (for "continue upload" scenario)
-            $db_stats = DiluxDB::get_stats();
-            $db_has_files = ($db_stats['total_files'] ?? 0) > 0;
+			$total_files = $retry_count;
+		} else {
+			// NORMAL MODE: Check if DB already has files (for "continue upload" scenario)
+			$db_stats     = DiluxDB::get_stats();
+			$db_has_files = ( $db_stats['total_files'] ?? 0 ) > 0;
 
-            if ($db_has_files) {
-                // DB already populated - this is a "continue upload"
-                // Use existing DB data, don't rescan or clear
-                $pending_files = (int) ($db_stats['pending_files'] ?? 0);
-                $total_files = $pending_files; // Only pending files for this sync session
+			if ( $db_has_files ) {
+				// DB already populated - this is a "continue upload"
+				// Use existing DB data, don't rescan or clear
+				$pending_files = (int) ( $db_stats['pending_files'] ?? 0 );
+				$total_files   = $pending_files; // Only pending files for this sync session
 
-                Logger::info('[Dilux SyncManager] DB stats: ' . print_r($db_stats, true));
-                Logger::info('[Dilux SyncManager] Pending files count: ' . $pending_files);
+				Logger::info( '[Dilux SyncManager] DB stats: ' . print_r( $db_stats, true ) );
+				Logger::info( '[Dilux SyncManager] Pending files count: ' . $pending_files );
 
-                if ($pending_files === 0) {
-                    // All files already synced
-                    ConfigManager::set_state(PluginState::SYNCED);
-                    Logger::info('[Dilux SyncManager] No pending files found, marking as SYNCED');
-                    return [
-                        'success' => true,
-                        'message' => 'All files already synced',
-                        'total_files' => 0
-                    ];
-                }
+				if ( $pending_files === 0 ) {
+					// All files already synced
+					ConfigManager::set_state( PluginState::SYNCED );
+					Logger::info( '[Dilux SyncManager] No pending files found, marking as SYNCED' );
+					return array(
+						'success'     => true,
+						'message'     => 'All files already synced',
+						'total_files' => 0,
+					);
+				}
 
-                Logger::info('[Dilux SyncManager] Continue upload: ' . $pending_files . ' pending files from existing DB');
-            } else {
-                // DB is empty - this is a fresh sync, need to scan files
-                $files_to_sync = $this->scan_files_to_sync(true);
+				Logger::info( '[Dilux SyncManager] Continue upload: ' . $pending_files . ' pending files from existing DB' );
+			} else {
+				// DB is empty - this is a fresh sync, need to scan files
+				$files_to_sync = $this->scan_files_to_sync( true );
 
-                if (empty($files_to_sync)) {
-                    // No files to sync, mark as completed
-                    ConfigManager::set_state(PluginState::SYNCED);
-                    return [
-                        'success' => true,
-                        'message' => 'No files to sync',
-                        'total_files' => 0
-                    ];
-                }
+				if ( empty( $files_to_sync ) ) {
+					// No files to sync, mark as completed
+					ConfigManager::set_state( PluginState::SYNCED );
+					return array(
+						'success'     => true,
+						'message'     => 'No files to sync',
+						'total_files' => 0,
+					);
+				}
 
-                // Clear previous sync data
-                DiluxDB::clear_table();
+				// Clear previous sync data
+				DiluxDB::clear_table();
 
-                // Add files to tracking table in batches for better performance
-                $batch_files = [];
-                foreach ($files_to_sync as $file_info) {
-                    // Transform to DB format (using relative path from local_path)
-                    $relative_path = str_replace($this->upload_dir['basedir'], '', $file_info['local_path']);
+				// Add files to tracking table in batches for better performance
+				$batch_files = array();
+				foreach ( $files_to_sync as $file_info ) {
+					// Transform to DB format (using relative path from local_path)
+					$relative_path = str_replace( $this->upload_dir['basedir'], '', $file_info['local_path'] );
 
-                    $batch_files[] = [
-                        'path' => $relative_path,
-                        'size' => $file_info['size']
-                    ];
+					$batch_files[] = array(
+						'path' => $relative_path,
+						'size' => $file_info['size'],
+					);
 
-                    // Insert in batches of 500
-                    if (count($batch_files) >= 500) {
-                        DiluxDB::add_files_batch($batch_files);
-                        $batch_files = [];
-                    }
-                }
+					// Insert in batches of 500
+					if ( count( $batch_files ) >= 500 ) {
+						DiluxDB::add_files_batch( $batch_files );
+						$batch_files = array();
+					}
+				}
 
-                // Insert remaining files
-                if (!empty($batch_files)) {
-                    DiluxDB::add_files_batch($batch_files);
-                }
+				// Insert remaining files
+				if ( ! empty( $batch_files ) ) {
+					DiluxDB::add_files_batch( $batch_files );
+				}
 
-                $total_files = count($files_to_sync);
-                Logger::info('[Dilux SyncManager] Fresh sync: scanned and stored ' . $total_files . ' files in DB');
-            }
-        }
+				$total_files = count( $files_to_sync );
+				Logger::info( '[Dilux SyncManager] Fresh sync: scanned and stored ' . $total_files . ' files in DB' );
+			}
+		}
 
-        // ⭐ NEW: Get session_id from POST (will be sent from JavaScript).
-        // This method is invoked by AJAX handlers that already verified the nonce
-        // via check_ajax_referer(); the session_id is a client-generated correlator.
+		// ⭐ NEW: Get session_id from POST (will be sent from JavaScript).
+		// This method is invoked by AJAX handlers that already verified the nonce
+		// via check_ajax_referer(); the session_id is a client-generated correlator.
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by calling AJAX handler.
-        $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'] ?? '')) : uniqid('sync_', true);
+		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ) : uniqid( 'sync_', true );
 
-        // Initialize sync metadata in wp_options (MINIMAL - only metadata, no file list)
-        $sync_meta = [
-            'status' => 'started',
-            'total_files' => $total_files,
-            'start_time' => time(),
-            'last_update' => time(),
-            'concurrency' => $this->parallel_uploads, // ⭐ FIXED: Save concurrency level
-            // ⭐ NEW: Session control fields
-            'sync_session_id' => $session_id,  // ID único del tab que controla la sync
-            'last_heartbeat' => time()          // Se actualiza cada batch
-        ];
+		// Initialize sync metadata in wp_options (MINIMAL - only metadata, no file list)
+		$sync_meta = array(
+			'status'          => 'started',
+			'total_files'     => $total_files,
+			'start_time'      => time(),
+			'last_update'     => time(),
+			'concurrency'     => $this->parallel_uploads, // ⭐ FIXED: Save concurrency level
+			// ⭐ NEW: Session control fields
+			'sync_session_id' => $session_id,  // ID único del tab que controla la sync
+			'last_heartbeat'  => time(),          // Se actualiza cada batch
+		);
 
-        // Save metadata (autoload = false for performance)
-        update_option('dilux_cs_sync_meta', $sync_meta, false);
-        ConfigManager::set_state(PluginState::SYNCING);
+		// Save metadata (autoload = false for performance)
+		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
+		ConfigManager::set_state( PluginState::SYNCING );
 
-        Logger::info('[Dilux SyncManager] Sync started with ' . $total_files . ' files');
+		Logger::info( '[Dilux SyncManager] Sync started with ' . $total_files . ' files' );
 
-        return [
-            'success' => true,
-            'message' => 'Sync started',
-            'total_files' => $total_files
-        ];
-    }
-    
-    /**
-     * Process batch of files with time-based batching
-     * ⭐ NEW: Uses custom DB table + time-based approach (Infinite Uploads style)
-     *
-     * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
-     * @return array Progress information
-     */
-    public function process_batch($time_limit = 8.0) {
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+		return array(
+			'success'     => true,
+			'message'     => 'Sync started',
+			'total_files' => $total_files,
+		);
+	}
 
-        $start_time = microtime(true);
-        $uploaded_this_batch = 0;
-        $max_batch_size = 12 * 1024 * 1024; // 12 MB (Infinite Uploads strategy)
+	/**
+	 * Process batch of files with time-based batching
+	 * ⭐ NEW: Uses custom DB table + time-based approach (Infinite Uploads style)
+	 *
+	 * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
+	 * @return array Progress information
+	 */
+	public function process_batch( $time_limit = 8.0 ) {
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
-        // Check if sync is active
-        $sync_meta = get_option('dilux_cs_sync_meta', []);
+		$start_time          = microtime( true );
+		$uploaded_this_batch = 0;
+		$max_batch_size      = 12 * 1024 * 1024; // 12 MB (Infinite Uploads strategy)
 
-        if (empty($sync_meta) || $sync_meta['status'] !== 'started') {
-            Logger::info('[Dilux SyncManager] process_batch() called but no active sync found');
-            return [
-                'status' => 'error',
-                'message' => 'No active sync found'
-            ];
-        }
+		// Check if sync is active
+		$sync_meta = get_option( 'dilux_cs_sync_meta', array() );
 
-        // ⭐ NEW: Validate session ownership.
-        // Invoked from AJAX handlers that already ran check_ajax_referer().
+		if ( empty( $sync_meta ) || $sync_meta['status'] !== 'started' ) {
+			Logger::info( '[Dilux SyncManager] process_batch() called but no active sync found' );
+			return array(
+				'status'  => 'error',
+				'message' => 'No active sync found',
+			);
+		}
+
+		// ⭐ NEW: Validate session ownership.
+		// Invoked from AJAX handlers that already ran check_ajax_referer().
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by calling AJAX handler.
-        $requesting_session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'] ?? '')) : '';
-        $current_session_id = $sync_meta['sync_session_id'] ?? '';
-
-        if (!empty($requesting_session_id) && $requesting_session_id !== $current_session_id) {
-            // This tab has lost control of the sync
-            Logger::info('[Dilux Multi-Tab] Session mismatch: requesting=' . $requesting_session_id . ', current=' . $current_session_id);
-            return [
-                'status' => 'session_lost',
-                'message' => 'Another tab has taken control of the sync',
-                'active_session_id' => $current_session_id
-            ];
-        }
-
-        // ⭐ NEW: Update heartbeat at the beginning of batch
-        $sync_meta['last_heartbeat'] = time();
-        update_option('dilux_cs_sync_meta', $sync_meta, false);
-
-        // Process files until time limit or no more files
-        while (true) {
-            // Get pending files from DB (up to 1000 files or 12MB)
-            $files = DiluxDB::get_pending_files(1000, $max_batch_size);
-
-            if (empty($files)) {
-                // ⭐ FIX: Don't auto-complete here, let JavaScript handle it
-                // This prevents race condition when cancelling
-                $stats = DiluxDB::get_stats();
-                return [
-                    'status' => 'completed',
-                    'total_files' => $stats['total_files'],
-                    'processed_files' => $stats['synced_files'],
-                    'successful_uploads' => $stats['synced_files'],
-                    'failed_uploads' => $stats['failed_files'],
-                    'percentage' => 100,
-                    'pending_files' => 0
-                ];
-            }
-
-            // Process files in parallel
-            $batch_to_upload = [];
-            foreach ($files as $file) {
-                $relative_path = $file['file'];
-                $local_path = $this->upload_dir['basedir'] . $relative_path;
-
-                // Build remote path (uploads/ + relative path without leading slash)
-                $remote_path = 'uploads/' . ltrim($relative_path, '/');
-
-                $batch_to_upload[] = [
-                    'path' => $relative_path,
-                    'local_path' => $local_path,
-                    'remote_path' => $remote_path,
-                    'size' => $file['size']
-                ];
-
-                // Don't exceed batch size
-                if (count($batch_to_upload) >= $this->batch_size) {
-                    break;
-                }
-            }
-
-            // ⭐ Increment error count BEFORE upload (in case of timeout)
-            foreach ($batch_to_upload as $file_info) {
-                DiluxDB::increment_error($file_info['path']);
-            }
-
-            // ⭐ DEBUG: Log batch start
-            $this->debug_log(sprintf(
-                'Processing batch of %d files (batch size limit: %d)',
-                count($batch_to_upload),
-                $this->batch_size
-            ));
-
-            // Upload batch
-            $results = $this->sync_files_parallel($batch_to_upload);
-
-            // Update DB based on results
-            foreach ($results as $i => $result) {
-                $file_info = $batch_to_upload[$i];
-
-                if ($result['success']) {
-                    $mark_result = DiluxDB::mark_synced($file_info['path']);
-                    if ($mark_result === false || $mark_result === 0) {
-                        Logger::info('[Dilux SyncManager] ⚠️ Upload succeeded but DB update failed for: ' . $file_info['path']);
-                    }
-                    $uploaded_this_batch++;
-                } else {
-                    // Store error message in DB
-                    $error_msg = $result['error'] ?? 'Unknown error';
-                    DiluxDB::increment_error($file_info['path'], $error_msg);
-                    Logger::error('[Dilux SyncManager] Failed: ' . $file_info['path'] . ' - ' . $error_msg);
-                }
-            }
-
-            // Check time limit
-            $elapsed = microtime(true) - $start_time;
-            if ($elapsed >= $time_limit) {
-                Logger::info('[Dilux SyncManager] Time limit reached (' . round($elapsed, 2) . 's), ending batch');
-                break;
-            }
-        }
-
-        // Get updated stats from DB
-        $stats = DiluxDB::get_stats();
-
-        Logger::info('[Dilux SyncManager] Batch completed: ' . $uploaded_this_batch . ' uploaded this round. Total: ' . $stats['synced_files'] . '/' . $stats['total_files']);
-
-        return [
-            'status' => 'processing',
-            'total_files' => $stats['total_files'],
-            'processed_files' => $stats['synced_files'],
-            'successful_uploads' => $stats['synced_files'],
-            'failed_uploads' => $stats['failed_files'],
-            'percentage' => $stats['percentage'],
-            'uploaded_this_batch' => $uploaded_this_batch,
-            'pending_files' => $stats['pending_files']
-        ];
-    }
-    
-    /**
-     * Get current sync progress
-     * ⭐ NEW: Uses custom DB table for stats
-     *
-     * @return array|null
-     */
-    public function get_progress() {
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-        $sync_meta = get_option('dilux_cs_sync_meta', []);
-
-        if (empty($sync_meta)) {
-            return null;
-        }
-
-        // Get real-time stats from custom table
-        $stats = DiluxDB::get_stats();
-
-        $elapsed_time = time() - ($sync_meta['start_time'] ?? time());
-
-        return [
-            'status' => $sync_meta['status'] ?? 'idle',
-            'total_files' => $stats['total_files'],
-            'processed_files' => $stats['synced_files'],
-            'successful_uploads' => $stats['synced_files'],
-            'failed_uploads' => $stats['failed_files'],
-            'percentage' => $stats['percentage'],
-            'elapsed_time' => $elapsed_time,
-            'pending_files' => $stats['pending_files'],
-            'remaining_files' => $stats['pending_files']
-        ];
-    }
-    
-    /**
-     * Pause current sync
-     * 
-     * @return bool
-     */
-    public function pause_sync() {
-        $progress = ConfigManager::get_sync_progress();
-        
-        if ($progress && $progress['status'] === 'started') {
-            $progress['status'] = 'paused';
-            $progress['last_update'] = time();
-            
-            ConfigManager::save_sync_progress($progress);
-            Logger::log('[Dilux SyncManager] Sync paused', 'info', true);
-            
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Resume paused sync
-     * 
-     * @return bool
-     */
-    public function resume_sync() {
-        $progress = ConfigManager::get_sync_progress();
-        
-        if ($progress && $progress['status'] === 'paused') {
-            $progress['status'] = 'started';
-            $progress['last_update'] = time();
-            
-            ConfigManager::save_sync_progress($progress);
-            ConfigManager::set_state(PluginState::SYNCING);
-            
-            Logger::log('[Dilux SyncManager] Sync resumed', 'info', true);
-            
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Cancel current sync
-     *
-     * @return bool
-     */
-    /**
-     * Cancel current sync
-     * ⭐ FIXED: Uses new DB architecture
-     *
-     * @return bool
-     */
-    public function cancel_sync() {
-        // Check if sync is active using new metadata structure
-        $sync_meta = get_option('dilux_cs_sync_meta', []);
-
-        if (!empty($sync_meta) && $sync_meta['status'] === 'started') {
-            require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-            // 1. Clear DB table
-            DiluxDB::clear_table();
-
-            // 2. Clear sync metadata
-            delete_option('dilux_cs_sync_meta');
-
-            // 3. Reset state to CONFIGURED
-            ConfigManager::set_state(PluginState::CONFIGURED);
-
-            Logger::info('[Dilux SyncManager] Sync cancelled - DB cleared and state reset to CONFIGURED');
-
-            return true;
-        }
-
-        // Fallback: Also check old architecture (for compatibility)
-        $progress = ConfigManager::get_sync_progress();
-        if ($progress && in_array($progress['status'], ['started', 'paused'])) {
-            ConfigManager::clear_sync_progress();
-            delete_transient('dilux_cs_full_file_list');
-            ConfigManager::set_state(PluginState::CONFIGURED);
-            Logger::info('[Dilux SyncManager] Sync cancelled (legacy architecture)');
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Retry failed files
-     * OPTIMIZED: Usa el nuevo formato con transient
-     *
-     * @return array ['success' => bool, 'message' => string]
-     */
-    // ⭐ OLD METHOD REMOVED - Now using unified sync flow with retry_failed parameter
-    // Retry is now handled by ajax_cs_start_sync with retry_failed=1
-
-    /**
-     * Scan uploads directory for files to sync
-     *
-     * @param bool $initial_sync Whether this is an initial sync (optimizes MD5 calculation)
-     * @return array Array of file information
-     */
-    public function scan_files_to_sync($initial_sync = false) {
-        $files = [];
-        $upload_basedir = $this->upload_dir['basedir'];
-        
-        Logger::debug('[Dilux SyncManager] Scanning directory: ' . $upload_basedir);
-        Logger::info('[Dilux SyncManager] Directory exists: ' . (is_dir($upload_basedir) ? 'YES' : 'NO'));
-        
-        if (!is_dir($upload_basedir)) {
-            Logger::error('[Dilux SyncManager] Directory does not exist, returning empty array');
-            return $files;
-        }
-        
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($upload_basedir, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::LEAVES_ONLY
-        );
-        
-        $total_files_found = 0;
-        $files_passed_filter = 0;
-        $skipped_files = [];
-        $skip_reasons = [];
-        
-        foreach ($iterator as $file) {
-            $total_files_found++;
-            if ($file->isFile()) {
-                $local_path = $file->getPathname();
-                $relative_path = str_replace($upload_basedir . '/', '', $local_path);
-                
-                // FIXED: Ensure remote path always starts with 'uploads/'
-                $remote_path = 'uploads/' . $relative_path;
-                
-                // Debug: Log first few files to verify correct path structure
-                if ($files_passed_filter < 3) {
-                    Logger::info('[Dilux SyncManager] Path mapping: ' . $local_path . ' → ' . $remote_path);
-                }
-                
-                // Get file size first
-                $file_size = $file->getSize();
-
-                // Skip files with size 0 (empty files) - checked before filter
-                if ($file_size === 0) {
-                    $skipped_files[] = basename($local_path);
-                    if (!isset($skip_reasons['empty_file'])) {
-                        $skip_reasons['empty_file'] = 0;
-                    }
-                    $skip_reasons['empty_file']++;
-                    continue;
-                }
-
-                // Apply filtering (including file type, max size, hidden files)
-                $skip_reason = $this->should_sync_file($local_path, $file_size);
-                if ($skip_reason !== true) {
-                    $skipped_files[] = basename($local_path);
-                    if (!isset($skip_reasons[$skip_reason])) {
-                        $skip_reasons[$skip_reason] = 0;
-                    }
-                    $skip_reasons[$skip_reason]++;
-                    continue;
-                }
-
-                $files_passed_filter++;
-
-                // Solo loggear cada 1000 archivos procesados para evitar spam
-                if ($files_passed_filter % 1000 === 0) {
-                    Logger::info('[Dilux SyncManager] Processed ' . $total_files_found . ' files, accepted ' . $files_passed_filter);
-                }
-
-                $files[] = [
-                    'local_path' => $local_path,
-                    'remote_path' => $remote_path, // FIXED: Now properly prefixed with 'uploads/'
-                    'size' => $file_size,
-                    'checksum' => $initial_sync ? null : md5_file($local_path), // OPTIMIZED: Skip MD5 for initial sync
-                    'is_initial_sync' => $initial_sync
-                ];
-            }
-        }
-        
-        Logger::info('[Dilux SyncManager] Total files found by iterator: ' . $total_files_found);
-        Logger::info('[Dilux SyncManager] Files passed filter: ' . $files_passed_filter);
-        
-        // Log información sobre archivos filtrados
-        if (!empty($skip_reasons)) {
-            Logger::warning('[Dilux SyncManager] Files skipped by reason:');
-            foreach ($skip_reasons as $reason => $count) {
-                Logger::info('[Dilux SyncManager]   ' . $reason . ': ' . $count . ' files');
-            }
-        }
-        
-        Logger::info('[Dilux SyncManager] Found ' . count($files) . ' files to sync');
-        
-        return $files;
-    }
-    
-    /**
-     * Check if file should be synced
-     * REFACTORED: Now uses SyncFilter DTO
-     *
-     * @param string $file_path
-     * @param int $file_size File size in bytes
-     * @return bool|string True if should sync, string with reason if should skip
-     */
-    private function should_sync_file($file_path, $file_size = 0) {
-        // Skip known cache/temp directories (always) - not in SyncFilter yet
-        $skip_patterns = [
-            '/cache/' => 'Cache directories',
-            '/temp/' => 'Temporary directories',
-            '/tmp/' => 'Temporary directories',
-        ];
-
-        foreach ($skip_patterns as $pattern => $reason) {
-            if (strpos($file_path, $pattern) !== false) {
-                return $reason;
-            }
-        }
-
-        // Use SyncFilter DTO for remaining filtering logic
-        $filter = $this->get_sync_filter();
-
-        if (!$filter->shouldIncludeFile($file_path, $file_size)) {
-            $exclusion_reason = $filter->getExclusionReason($file_path, $file_size);
-            return $exclusion_reason ?? 'File excluded by filter';
-        }
-
-        return true;
-    }
-    
-    /**
-     * Sync multiple files in parallel using cURL Multi
-     *
-     * PERFORMANCE BOOST: 10x faster than sequential uploads
-     *
-     * @param array $batch Array of file_info arrays
-     * @return array Array of results ['success' => bool, 'error' => string]
-     */
-    private function sync_files_parallel($batch) {
-        $results = [];
-        $chunks = array_chunk($batch, $this->parallel_uploads);
-
-        foreach ($chunks as $chunk) {
-            $chunk_results = $this->upload_chunk_parallel($chunk);
-            $results = array_merge($results, $chunk_results);
-        }
-
-        return $results;
-    }
-
-    /**
-     * Upload a chunk of files in parallel using cURL Multi
-     * OPTIMIZED: Properly manages file handles for streaming
-     *
-     * @param array $files Array of file_info arrays (max $parallel_uploads files)
-     * @return array Array of results
-     */
-    private function upload_chunk_parallel($files) {
-        $mh = curl_multi_init();
-        $handles = [];
-        $file_handles = []; // Track file handles for cleanup
-        $results = [];
-
-        // Prepare all cURL handles
-        foreach ($files as $i => $file_info) {
-            $handle_data = $this->prepare_upload_handle($file_info);
-
-            if ($handle_data['success']) {
-                $handles[$i] = $handle_data['handle'];
-                $file_handles[$i] = $handle_data['file_handle']; // Store file handle
-                curl_multi_add_handle($mh, $handle_data['handle']);
-            } else {
-                // Failed to prepare handle
-                $results[$i] = [
-                    'success' => false,
-                    'error' => $handle_data['error']
-                ];
-            }
-        }
-
-        // Execute all handles in parallel
-        $running = null;
-        do {
-            curl_multi_exec($mh, $running);
-            curl_multi_select($mh);
-        } while ($running > 0);
-
-        // Collect results and cleanup
-        foreach ($handles as $i => $ch) {
-            $response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $response_body = curl_multi_getcontent($ch); // ⭐ FIX: Capture response body
-            $error = curl_error($ch);
-            $file_info = $files[$i];
-
-            if ($response_code === 201 || $response_code === 200) {
-                $results[$i] = ['success' => true];
-
-                // ⭐ DEBUG: Log upload result (cloud providers typically return 201 on PUT success)
-                $this->debug_log(sprintf(
-                    '✓ UPLOADED: %s (%.2f KB) [HTTP %d]',
-                    $file_info['path'],
-                    $file_info['size'] / 1024,
-                    $response_code
-                ));
-            } else {
-                // ⭐ FIX: Enhanced error logging with Azure response body
-                $error_details = $error ?: 'HTTP ' . $response_code;
-                if (!empty($response_body) && $response_code >= 400) {
-                    // Log Azure error response for debugging
-                    Logger::info('[Dilux SyncManager] Azure Response Body for ' . $file_info['path'] . ': ' . substr($response_body, 0, 500));
-                }
-
-                $results[$i] = [
-                    'success' => false,
-                    'error' => $error_details
-                ];
-
-                // ⭐ DEBUG: Log failed upload with error details
-                $this->debug_log(sprintf(
-                    '✗ FAILED: %s - Error: %s [HTTP %d]',
-                    $file_info['path'],
-                    $error ?: 'Unknown error',
-                    $response_code
-                ));
-            }
-
-            curl_multi_remove_handle($mh, $ch);
-            curl_close($ch);
-
-            // CRITICAL: Close file handle to free resources
-            if (isset($file_handles[$i]) && is_resource($file_handles[$i])) {
-                fclose($file_handles[$i]);
-            }
-        }
-
-        curl_multi_close($mh);
-
-        // Fill missing results (for files that failed to prepare)
-        foreach ($files as $i => $file_info) {
-            if (!isset($results[$i])) {
-                $results[$i] = [
-                    'success' => false,
-                    'error' => 'Unknown error'
-                ];
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * Prepare a cURL handle for uploading a file to cloud storage
-     * OPTIMIZED: Uses streaming for memory efficiency + chunked upload for large files
-     *
-     * @param array $file_info
-     * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
-     */
-    /**
-     * Prepare upload handle (delegates to provider)
-     * Provider-agnostic method that delegates to cloud storage provider
-     *
-     * @param array $file_info File information
-     * @return array Upload handle data
-     */
-    private function prepare_upload_handle($file_info) {
-        $local_path = $file_info['local_path'];
-
-        if (!file_exists($local_path)) {
-            return [
-                'success' => false,
-                'error' => 'File not found: ' . $local_path,
-                'file_handle' => null
-            ];
-        }
-
-        $file_size = filesize($local_path);
-
-        // OPTIMIZATION: Use chunked upload for files > 10MB
-        if ($file_size > $this->chunked_threshold) {
-            return $this->cloud_client->prepare_chunked_upload_handle($file_info);
-        }
-
-        // Regular upload for files < 10MB
-        return $this->cloud_client->prepare_batch_upload_handle($file_info);
-    }
-
-    /**
-     * ⭐ NEW: Download files in parallel (same pattern as upload)
-     *
-     * @param array $batch Array of file_info arrays
-     * @return array Array of results
-     */
-    private function download_files_parallel($batch) {
-        $results = [];
-        $chunks = array_chunk($batch, $this->parallel_uploads);
-
-        foreach ($chunks as $chunk) {
-            $chunk_results = $this->download_chunk_parallel($chunk);
-            $results = array_merge($results, $chunk_results);
-        }
-
-        return $results;
-    }
-
-    /**
-     * ⭐ NEW: Download a chunk of files in parallel using cURL Multi
-     *
-     * @param array $files Array of file_info arrays (max $parallel_uploads files)
-     * @return array Array of results
-     */
-    private function download_chunk_parallel($files) {
-        Logger::info('[Dilux SyncManager] 🚀 Downloading chunk of ' . count($files) . ' files in parallel (concurrency=' . $this->parallel_uploads . ')');
-
-        $mh = curl_multi_init();
-        $handles = [];
-        $file_handles = []; // Track file handles for writing
-        $results = [];
-
-        // Prepare all cURL handles
-        foreach ($files as $i => $file_info) {
-            $handle_data = $this->prepare_download_handle($file_info);
-
-            if ($handle_data['success']) {
-                $handles[$i] = $handle_data['handle'];
-                $file_handles[$i] = $handle_data['file_handle'];
-                curl_multi_add_handle($mh, $handle_data['handle']);
-            } else {
-                // Failed to prepare handle
-                $results[$i] = [
-                    'success' => false,
-                    'error' => $handle_data['error']
-                ];
-            }
-        }
-
-        // Execute all handles in parallel
-        $running = null;
-        do {
-            curl_multi_exec($mh, $running);
-            curl_multi_select($mh);
-        } while ($running > 0);
-
-        // Collect results and cleanup
-        foreach ($handles as $i => $ch) {
-            $response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-
-            if ($response_code === 200) {
-                $results[$i] = ['success' => true];
-            } else {
-                $results[$i] = [
-                    'success' => false,
-                    'error' => $error ?: 'HTTP ' . $response_code
-                ];
-            }
-
-            curl_multi_remove_handle($mh, $ch);
-            curl_close($ch);
-
-            // Close file handle
-            if (isset($file_handles[$i]) && is_resource($file_handles[$i])) {
-                fclose($file_handles[$i]);
-            }
-        }
-
-        curl_multi_close($mh);
-
-        // Fill missing results
-        foreach ($files as $i => $file_info) {
-            if (!isset($results[$i])) {
-                $results[$i] = [
-                    'success' => false,
-                    'error' => 'Unknown error'
-                ];
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * Prepare a cURL handle for downloading a file from cloud storage
-     * Delegates to cloud provider implementation
-     *
-     * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-     * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
-     */
-    private function prepare_download_handle($file_info) {
-        // Delegate to cloud provider (Azure, AWS, GCP, etc.)
-        return $this->cloud_client->prepare_download_handle($file_info);
-    }
-
-    /**
-     * Complete sync process
-     *
-     * @param array $progress
-     * @return array
-     */
-    /**
-     * Complete sync process
-     * OPTIMIZED: Limpia el transient de file list
-     *
-     * @param array $progress
-     * @return array
-     */
-    /**
-     * Complete sync using new DB table architecture
-     * ⭐ NEW: Works with custom DB table
-     */
-    private function complete_sync_v2($sync_meta) {
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-        $stats = DiluxDB::get_stats();
-        $end_time = time();
-        $elapsed_time = $end_time - $sync_meta['start_time'];
-
-        // Update sync metadata
-        $sync_meta['status'] = 'completed';
-        $sync_meta['end_time'] = $end_time;
-        update_option('dilux_cs_sync_meta', $sync_meta, false);
-
-        ConfigManager::set_state(PluginState::SYNCED);
-
-        Logger::info('[Dilux SyncManager] Sync completed - ' .
-                 $stats['synced_files'] . ' successful, ' .
-                 $stats['failed_files'] . ' failed, ' .
-                 $elapsed_time . ' seconds');
-
-        return [
-            'status' => 'completed',
-            'total_files' => $stats['total_files'],
-            'processed_files' => $stats['synced_files'],
-            'successful_uploads' => $stats['synced_files'],
-            'failed_uploads' => $stats['failed_files'],
-            'elapsed_time' => $elapsed_time,
-            'percentage' => 100
-        ];
-    }
-
-    /**
-     * ⭐ NEW: Compare local files with cloud to detect deleted files
-     * This should be called AFTER upload sync completes
-     * Note: Cloud provider list_files() should return all files at once
-     *
-     * @return array ['success' => bool, 'cloud_files_found' => int, 'cloud_only_files' => int]
-     */
-    public function compare_with_cloud() {
-        if (!$this->cloud_client) {
-            return [
-                'success' => false,
-                'message' => 'Cloud client not configured'
-            ];
-        }
-
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-        // List ALL files from cloud storage (no pagination)
-        $cloud_files = $this->cloud_client->list_files('uploads/');
-
-        if ($cloud_files === false || empty($cloud_files)) {
-            return [
-                'success' => false,
-                'message' => 'Failed to list cloud files'
-            ];
-        }
-
-        $cloud_only_files = [];
-
-        foreach ($cloud_files as $cloud_file) {
-            // Remove 'uploads/' prefix to get relative path for DB lookup
-            $relative_path = str_replace('uploads/', '/', $cloud_file['path']);
-
-            // Check if this file exists in our local tracking table
-            global $wpdb;
-            $local_file = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM " . DiluxDB::get_table_name() . " WHERE file = %s",
-                $relative_path
-            ));
-
-            if (!$local_file) {
-                // File exists in cloud but NOT in local DB = deleted locally
-                $cloud_only_files[] = [
-                    'path' => $relative_path,
-                    'size' => $cloud_file['size']
-                ];
-            } elseif ($local_file->synced == 0 && $local_file->size == $cloud_file['size']) {
-                // File already synced (same size), mark as synced
-                DiluxDB::mark_synced($relative_path);
-            }
-        }
-
-        // Add cloud-only files as deleted
-        if (!empty($cloud_only_files)) {
-            DiluxDB::add_cloud_only_files_batch($cloud_only_files);
-        }
-
-        Logger::info('[Dilux SyncManager] Cloud comparison: found ' . count($cloud_files) . ' cloud files, ' . count($cloud_only_files) . ' deleted locally');
-
-        return [
-            'success' => true,
-            'cloud_files_found' => count($cloud_files),
-            'cloud_only_files' => count($cloud_only_files)
-        ];
-    }
-
-    /**
-     * ⭐ NEW: Reverse sync (Cloud → Local)
-     * Downloads files from cloud storage to local storage
-     * Used when disconnecting from cloud provider
-     *
-     * @param string $mode 'continue' (smart, only missing) or 'scratch' (re-download all)
-     * @return array ['success' => bool, 'message' => string, 'total_files' => int]
-     */
-    public function start_reverse_sync($mode = 'continue') {
-        $current_state = ConfigManager::get_state();
-
-        if ($current_state !== PluginState::OFFLOADING_ACTIVE) {
-            return [
-                'success' => false,
-                'message' => 'Reverse sync only available when offloading is active'
-            ];
-        }
-
-        if (!$this->cloud_client) {
-            return [
-                'success' => false,
-                'message' => 'Cloud client not configured'
-            ];
-        }
-
-        // Test connection before listing files
-        Logger::info('[Dilux SyncManager] Testing connection before reverse sync (mode: ' . $mode . ')');
-        $connection_test = $this->cloud_client->test_connection();
-
-        if (!$connection_test['success']) {
-            Logger::info('[Dilux SyncManager] Connection test failed: ' . $connection_test['message']);
-            return [
-                'success' => false,
-                'message' => 'Connection to cloud storage failed: ' . $connection_test['message']
-            ];
-        }
-
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-        // ⭐ NEW MODE LOGIC
-        if ($mode === 'scratch') {
-            // SCRATCH MODE: Clear table and re-download EVERYTHING
-            Logger::info('[Dilux SyncManager] SCRATCH mode: Clearing table and cataloging all cloud files...');
-
-            DiluxDB::clear_table();
-
-            // List all files in cloud storage
-            $cloud_files = $this->cloud_client->list_files('uploads/');
-
-            if (empty($cloud_files)) {
-                return [
-                    'success' => false,
-                    'message' => 'No files found in cloud storage.'
-                ];
-            }
-
-            // Mark ALL as deleted (pending download)
-            $batch_files = [];
-            foreach ($cloud_files as $cloud_file) {
-                $relative_path = str_replace('uploads/', '/', $cloud_file['path']);
-                $batch_files[] = [
-                    'path' => $relative_path,
-                    'size' => $cloud_file['size']
-                ];
-
-                if (count($batch_files) >= 500) {
-                    DiluxDB::add_cloud_only_files_batch($batch_files);
-                    $batch_files = [];
-                }
-            }
-
-            if (!empty($batch_files)) {
-                DiluxDB::add_cloud_only_files_batch($batch_files);
-            }
-
-            $deleted_stats = DiluxDB::get_deleted_stats();
-            Logger::info('[Dilux SyncManager] SCRATCH mode: ' . count($cloud_files) . ' files marked for download');
-
-        } else {
-            // CONTINUE MODE (default): Resume existing download
-            Logger::info('[Dilux SyncManager] CONTINUE mode: Resuming existing download from DB...');
-
-            // Check if there are already deleted files in DB
-            $deleted_stats = DiluxDB::get_deleted_stats();
-
-            if (!empty($deleted_stats) && $deleted_stats['files'] > 0) {
-                // Already have files marked for download, just resume
-                Logger::info('[Dilux SyncManager] CONTINUE mode: Found ' . $deleted_stats['files'] . ' files already marked for download, resuming...');
-            } else {
-                // No files marked yet, need to catalog from cloud storage (smart mode)
-                Logger::info('[Dilux SyncManager] CONTINUE mode: No files marked yet, cataloging missing files from cloud storage...');
-
-                global $wpdb;
-                $table_name = $wpdb->prefix . 'dilux_cs_files';
-
-                // List all files in cloud storage
-                $cloud_files = $this->cloud_client->list_files('uploads/');
-
-                if (empty($cloud_files)) {
-                    return [
-                        'success' => false,
-                        'message' => 'No files found in cloud storage.'
-                    ];
-                }
-
-                // Get files already in DB (synced files)
-                $synced_files_in_db = [];
-                $db_files = $wpdb->get_results("
+		$requesting_session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ) : '';
+		$current_session_id    = $sync_meta['sync_session_id'] ?? '';
+
+		if ( ! empty( $requesting_session_id ) && $requesting_session_id !== $current_session_id ) {
+			// This tab has lost control of the sync
+			Logger::info( '[Dilux Multi-Tab] Session mismatch: requesting=' . $requesting_session_id . ', current=' . $current_session_id );
+			return array(
+				'status'            => 'session_lost',
+				'message'           => 'Another tab has taken control of the sync',
+				'active_session_id' => $current_session_id,
+			);
+		}
+
+		// ⭐ NEW: Update heartbeat at the beginning of batch
+		$sync_meta['last_heartbeat'] = time();
+		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
+
+		// Process files until time limit or no more files
+		while ( true ) {
+			// Get pending files from DB (up to 1000 files or 12MB)
+			$files = DiluxDB::get_pending_files( 1000, $max_batch_size );
+
+			if ( empty( $files ) ) {
+				// ⭐ FIX: Don't auto-complete here, let JavaScript handle it
+				// This prevents race condition when cancelling
+				$stats = DiluxDB::get_stats();
+				return array(
+					'status'             => 'completed',
+					'total_files'        => $stats['total_files'],
+					'processed_files'    => $stats['synced_files'],
+					'successful_uploads' => $stats['synced_files'],
+					'failed_uploads'     => $stats['failed_files'],
+					'percentage'         => 100,
+					'pending_files'      => 0,
+				);
+			}
+
+			// Process files in parallel
+			$batch_to_upload = array();
+			foreach ( $files as $file ) {
+				$relative_path = $file['file'];
+				$local_path    = $this->upload_dir['basedir'] . $relative_path;
+
+				// Build remote path (uploads/ + relative path without leading slash)
+				$remote_path = 'uploads/' . ltrim( $relative_path, '/' );
+
+				$batch_to_upload[] = array(
+					'path'        => $relative_path,
+					'local_path'  => $local_path,
+					'remote_path' => $remote_path,
+					'size'        => $file['size'],
+				);
+
+				// Don't exceed batch size
+				if ( count( $batch_to_upload ) >= $this->batch_size ) {
+					break;
+				}
+			}
+
+			// ⭐ Increment error count BEFORE upload (in case of timeout)
+			foreach ( $batch_to_upload as $file_info ) {
+				DiluxDB::increment_error( $file_info['path'] );
+			}
+
+			// ⭐ DEBUG: Log batch start
+			$this->debug_log(
+				sprintf(
+					'Processing batch of %d files (batch size limit: %d)',
+					count( $batch_to_upload ),
+					$this->batch_size
+				)
+			);
+
+			// Upload batch
+			$results = $this->sync_files_parallel( $batch_to_upload );
+
+			// Update DB based on results
+			foreach ( $results as $i => $result ) {
+				$file_info = $batch_to_upload[ $i ];
+
+				if ( $result['success'] ) {
+					$mark_result = DiluxDB::mark_synced( $file_info['path'] );
+					if ( $mark_result === false || $mark_result === 0 ) {
+						Logger::info( '[Dilux SyncManager] ⚠️ Upload succeeded but DB update failed for: ' . $file_info['path'] );
+					}
+					++$uploaded_this_batch;
+				} else {
+					// Store error message in DB
+					$error_msg = $result['error'] ?? 'Unknown error';
+					DiluxDB::increment_error( $file_info['path'], $error_msg );
+					Logger::error( '[Dilux SyncManager] Failed: ' . $file_info['path'] . ' - ' . $error_msg );
+				}
+			}
+
+			// Check time limit
+			$elapsed = microtime( true ) - $start_time;
+			if ( $elapsed >= $time_limit ) {
+				Logger::info( '[Dilux SyncManager] Time limit reached (' . round( $elapsed, 2 ) . 's), ending batch' );
+				break;
+			}
+		}
+
+		// Get updated stats from DB
+		$stats = DiluxDB::get_stats();
+
+		Logger::info( '[Dilux SyncManager] Batch completed: ' . $uploaded_this_batch . ' uploaded this round. Total: ' . $stats['synced_files'] . '/' . $stats['total_files'] );
+
+		return array(
+			'status'              => 'processing',
+			'total_files'         => $stats['total_files'],
+			'processed_files'     => $stats['synced_files'],
+			'successful_uploads'  => $stats['synced_files'],
+			'failed_uploads'      => $stats['failed_files'],
+			'percentage'          => $stats['percentage'],
+			'uploaded_this_batch' => $uploaded_this_batch,
+			'pending_files'       => $stats['pending_files'],
+		);
+	}
+
+	/**
+	 * Get current sync progress
+	 * ⭐ NEW: Uses custom DB table for stats
+	 *
+	 * @return array|null
+	 */
+	public function get_progress() {
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+
+		$sync_meta = get_option( 'dilux_cs_sync_meta', array() );
+
+		if ( empty( $sync_meta ) ) {
+			return null;
+		}
+
+		// Get real-time stats from custom table
+		$stats = DiluxDB::get_stats();
+
+		$elapsed_time = time() - ( $sync_meta['start_time'] ?? time() );
+
+		return array(
+			'status'             => $sync_meta['status'] ?? 'idle',
+			'total_files'        => $stats['total_files'],
+			'processed_files'    => $stats['synced_files'],
+			'successful_uploads' => $stats['synced_files'],
+			'failed_uploads'     => $stats['failed_files'],
+			'percentage'         => $stats['percentage'],
+			'elapsed_time'       => $elapsed_time,
+			'pending_files'      => $stats['pending_files'],
+			'remaining_files'    => $stats['pending_files'],
+		);
+	}
+
+	/**
+	 * Pause current sync
+	 *
+	 * @return bool
+	 */
+	public function pause_sync() {
+		$progress = ConfigManager::get_sync_progress();
+
+		if ( $progress && $progress['status'] === 'started' ) {
+			$progress['status']      = 'paused';
+			$progress['last_update'] = time();
+
+			ConfigManager::save_sync_progress( $progress );
+			Logger::log( '[Dilux SyncManager] Sync paused', 'info', true );
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Resume paused sync
+	 *
+	 * @return bool
+	 */
+	public function resume_sync() {
+		$progress = ConfigManager::get_sync_progress();
+
+		if ( $progress && $progress['status'] === 'paused' ) {
+			$progress['status']      = 'started';
+			$progress['last_update'] = time();
+
+			ConfigManager::save_sync_progress( $progress );
+			ConfigManager::set_state( PluginState::SYNCING );
+
+			Logger::log( '[Dilux SyncManager] Sync resumed', 'info', true );
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Cancel current sync
+	 *
+	 * @return bool
+	 */
+	/**
+	 * Cancel current sync
+	 * ⭐ FIXED: Uses new DB architecture
+	 *
+	 * @return bool
+	 */
+	public function cancel_sync() {
+		// Check if sync is active using new metadata structure
+		$sync_meta = get_option( 'dilux_cs_sync_meta', array() );
+
+		if ( ! empty( $sync_meta ) && $sync_meta['status'] === 'started' ) {
+			require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+
+			// 1. Clear DB table
+			DiluxDB::clear_table();
+
+			// 2. Clear sync metadata
+			delete_option( 'dilux_cs_sync_meta' );
+
+			// 3. Reset state to CONFIGURED
+			ConfigManager::set_state( PluginState::CONFIGURED );
+
+			Logger::info( '[Dilux SyncManager] Sync cancelled - DB cleared and state reset to CONFIGURED' );
+
+			return true;
+		}
+
+		// Fallback: Also check old architecture (for compatibility)
+		$progress = ConfigManager::get_sync_progress();
+		if ( $progress && in_array( $progress['status'], array( 'started', 'paused' ), true ) ) {
+			ConfigManager::clear_sync_progress();
+			delete_transient( 'dilux_cs_full_file_list' );
+			ConfigManager::set_state( PluginState::CONFIGURED );
+			Logger::info( '[Dilux SyncManager] Sync cancelled (legacy architecture)' );
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Retry failed files
+	 * OPTIMIZED: Usa el nuevo formato con transient
+	 *
+	 * @return array ['success' => bool, 'message' => string]
+	 */
+	// ⭐ OLD METHOD REMOVED - Now using unified sync flow with retry_failed parameter
+	// Retry is now handled by ajax_cs_start_sync with retry_failed=1
+
+	/**
+	 * Scan uploads directory for files to sync
+	 *
+	 * @param bool $initial_sync Whether this is an initial sync (optimizes MD5 calculation)
+	 * @return array Array of file information
+	 */
+	public function scan_files_to_sync( $initial_sync = false ) {
+		$files          = array();
+		$upload_basedir = $this->upload_dir['basedir'];
+
+		Logger::debug( '[Dilux SyncManager] Scanning directory: ' . $upload_basedir );
+		Logger::info( '[Dilux SyncManager] Directory exists: ' . ( is_dir( $upload_basedir ) ? 'YES' : 'NO' ) );
+
+		if ( ! is_dir( $upload_basedir ) ) {
+			Logger::error( '[Dilux SyncManager] Directory does not exist, returning empty array' );
+			return $files;
+		}
+
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( $upload_basedir, \RecursiveDirectoryIterator::SKIP_DOTS ),
+			\RecursiveIteratorIterator::LEAVES_ONLY
+		);
+
+		$total_files_found   = 0;
+		$files_passed_filter = 0;
+		$skipped_files       = array();
+		$skip_reasons        = array();
+
+		foreach ( $iterator as $file ) {
+			++$total_files_found;
+			if ( $file->isFile() ) {
+				$local_path    = $file->getPathname();
+				$relative_path = str_replace( $upload_basedir . '/', '', $local_path );
+
+				// FIXED: Ensure remote path always starts with 'uploads/'
+				$remote_path = 'uploads/' . $relative_path;
+
+				// Debug: Log first few files to verify correct path structure
+				if ( $files_passed_filter < 3 ) {
+					Logger::info( '[Dilux SyncManager] Path mapping: ' . $local_path . ' → ' . $remote_path );
+				}
+
+				// Get file size first
+				$file_size = $file->getSize();
+
+				// Skip files with size 0 (empty files) - checked before filter
+				if ( $file_size === 0 ) {
+					$skipped_files[] = basename( $local_path );
+					if ( ! isset( $skip_reasons['empty_file'] ) ) {
+						$skip_reasons['empty_file'] = 0;
+					}
+					++$skip_reasons['empty_file'];
+					continue;
+				}
+
+				// Apply filtering (including file type, max size, hidden files)
+				$skip_reason = $this->should_sync_file( $local_path, $file_size );
+				if ( $skip_reason !== true ) {
+					$skipped_files[] = basename( $local_path );
+					if ( ! isset( $skip_reasons[ $skip_reason ] ) ) {
+						$skip_reasons[ $skip_reason ] = 0;
+					}
+					++$skip_reasons[ $skip_reason ];
+					continue;
+				}
+
+				++$files_passed_filter;
+
+				// Solo loggear cada 1000 archivos procesados para evitar spam
+				if ( $files_passed_filter % 1000 === 0 ) {
+					Logger::info( '[Dilux SyncManager] Processed ' . $total_files_found . ' files, accepted ' . $files_passed_filter );
+				}
+
+				$files[] = array(
+					'local_path'      => $local_path,
+					'remote_path'     => $remote_path, // FIXED: Now properly prefixed with 'uploads/'
+					'size'            => $file_size,
+					'checksum'        => $initial_sync ? null : md5_file( $local_path ), // OPTIMIZED: Skip MD5 for initial sync
+					'is_initial_sync' => $initial_sync,
+				);
+			}
+		}
+
+		Logger::info( '[Dilux SyncManager] Total files found by iterator: ' . $total_files_found );
+		Logger::info( '[Dilux SyncManager] Files passed filter: ' . $files_passed_filter );
+
+		// Log información sobre archivos filtrados
+		if ( ! empty( $skip_reasons ) ) {
+			Logger::warning( '[Dilux SyncManager] Files skipped by reason:' );
+			foreach ( $skip_reasons as $reason => $count ) {
+				Logger::info( '[Dilux SyncManager]   ' . $reason . ': ' . $count . ' files' );
+			}
+		}
+
+		Logger::info( '[Dilux SyncManager] Found ' . count( $files ) . ' files to sync' );
+
+		return $files;
+	}
+
+	/**
+	 * Check if file should be synced
+	 * REFACTORED: Now uses SyncFilter DTO
+	 *
+	 * @param string $file_path
+	 * @param int    $file_size File size in bytes
+	 * @return bool|string True if should sync, string with reason if should skip
+	 */
+	private function should_sync_file( $file_path, $file_size = 0 ) {
+		// Skip known cache/temp directories (always) - not in SyncFilter yet
+		$skip_patterns = array(
+			'/cache/' => 'Cache directories',
+			'/temp/'  => 'Temporary directories',
+			'/tmp/'   => 'Temporary directories',
+		);
+
+		foreach ( $skip_patterns as $pattern => $reason ) {
+			if ( strpos( $file_path, $pattern ) !== false ) {
+				return $reason;
+			}
+		}
+
+		// Use SyncFilter DTO for remaining filtering logic
+		$filter = $this->get_sync_filter();
+
+		if ( ! $filter->shouldIncludeFile( $file_path, $file_size ) ) {
+			$exclusion_reason = $filter->getExclusionReason( $file_path, $file_size );
+			return $exclusion_reason ?? 'File excluded by filter';
+		}
+
+		return true;
+	}
+
+	/**
+	 * Sync multiple files in parallel using cURL Multi
+	 *
+	 * PERFORMANCE BOOST: 10x faster than sequential uploads
+	 *
+	 * @param array $batch Array of file_info arrays
+	 * @return array Array of results ['success' => bool, 'error' => string]
+	 */
+	private function sync_files_parallel( $batch ) {
+		$results = array();
+		$chunks  = array_chunk( $batch, $this->parallel_uploads );
+
+		foreach ( $chunks as $chunk ) {
+			$chunk_results = $this->upload_chunk_parallel( $chunk );
+			$results       = array_merge( $results, $chunk_results );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Upload a chunk of files in parallel using cURL Multi
+	 * OPTIMIZED: Properly manages file handles for streaming
+	 *
+	 * @param array $files Array of file_info arrays (max $parallel_uploads files)
+	 * @return array Array of results
+	 */
+	private function upload_chunk_parallel( $files ) {
+		$mh           = curl_multi_init();
+		$handles      = array();
+		$file_handles = array(); // Track file handles for cleanup
+		$results      = array();
+
+		// Prepare all cURL handles
+		foreach ( $files as $i => $file_info ) {
+			$handle_data = $this->prepare_upload_handle( $file_info );
+
+			if ( $handle_data['success'] ) {
+				$handles[ $i ]      = $handle_data['handle'];
+				$file_handles[ $i ] = $handle_data['file_handle']; // Store file handle
+				curl_multi_add_handle( $mh, $handle_data['handle'] );
+			} else {
+				// Failed to prepare handle
+				$results[ $i ] = array(
+					'success' => false,
+					'error'   => $handle_data['error'],
+				);
+			}
+		}
+
+		// Execute all handles in parallel
+		$running = null;
+		do {
+			curl_multi_exec( $mh, $running );
+			curl_multi_select( $mh );
+		} while ( $running > 0 );
+
+		// Collect results and cleanup
+		foreach ( $handles as $i => $ch ) {
+			$response_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			$response_body = curl_multi_getcontent( $ch ); // ⭐ FIX: Capture response body
+			$error         = curl_error( $ch );
+			$file_info     = $files[ $i ];
+
+			if ( $response_code === 201 || $response_code === 200 ) {
+				$results[ $i ] = array( 'success' => true );
+
+				// ⭐ DEBUG: Log upload result (cloud providers typically return 201 on PUT success)
+				$this->debug_log(
+					sprintf(
+						'✓ UPLOADED: %s (%.2f KB) [HTTP %d]',
+						$file_info['path'],
+						$file_info['size'] / 1024,
+						$response_code
+					)
+				);
+			} else {
+				// ⭐ FIX: Enhanced error logging with Azure response body
+				$error_details = $error ? $error : 'HTTP ' . $response_code;
+				if ( ! empty( $response_body ) && $response_code >= 400 ) {
+					// Log Azure error response for debugging
+					Logger::info( '[Dilux SyncManager] Azure Response Body for ' . $file_info['path'] . ': ' . substr( $response_body, 0, 500 ) );
+				}
+
+				$results[ $i ] = array(
+					'success' => false,
+					'error'   => $error_details,
+				);
+
+				// ⭐ DEBUG: Log failed upload with error details
+				$this->debug_log(
+					sprintf(
+						'✗ FAILED: %s - Error: %s [HTTP %d]',
+						$file_info['path'],
+						$error ? $error : 'Unknown error',
+						$response_code
+					)
+				);
+			}
+
+			curl_multi_remove_handle( $mh, $ch );
+			curl_close( $ch );
+
+			// CRITICAL: Close file handle to free resources
+			if ( isset( $file_handles[ $i ] ) && is_resource( $file_handles[ $i ] ) ) {
+				fclose( $file_handles[ $i ] );
+			}
+		}
+
+		curl_multi_close( $mh );
+
+		// Fill missing results (for files that failed to prepare)
+		foreach ( $files as $i => $file_info ) {
+			if ( ! isset( $results[ $i ] ) ) {
+				$results[ $i ] = array(
+					'success' => false,
+					'error'   => 'Unknown error',
+				);
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Prepare a cURL handle for uploading a file to cloud storage
+	 * OPTIMIZED: Uses streaming for memory efficiency + chunked upload for large files
+	 *
+	 * @param array $file_info
+	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 */
+	/**
+	 * Prepare upload handle (delegates to provider)
+	 * Provider-agnostic method that delegates to cloud storage provider
+	 *
+	 * @param array $file_info File information
+	 * @return array Upload handle data
+	 */
+	private function prepare_upload_handle( $file_info ) {
+		$local_path = $file_info['local_path'];
+
+		if ( ! file_exists( $local_path ) ) {
+			return array(
+				'success'     => false,
+				'error'       => 'File not found: ' . $local_path,
+				'file_handle' => null,
+			);
+		}
+
+		$file_size = filesize( $local_path );
+
+		// OPTIMIZATION: Use chunked upload for files > 10MB
+		if ( $file_size > $this->chunked_threshold ) {
+			return $this->cloud_client->prepare_chunked_upload_handle( $file_info );
+		}
+
+		// Regular upload for files < 10MB
+		return $this->cloud_client->prepare_batch_upload_handle( $file_info );
+	}
+
+	/**
+	 * ⭐ NEW: Download files in parallel (same pattern as upload)
+	 *
+	 * @param array $batch Array of file_info arrays
+	 * @return array Array of results
+	 */
+	private function download_files_parallel( $batch ) {
+		$results = array();
+		$chunks  = array_chunk( $batch, $this->parallel_uploads );
+
+		foreach ( $chunks as $chunk ) {
+			$chunk_results = $this->download_chunk_parallel( $chunk );
+			$results       = array_merge( $results, $chunk_results );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * ⭐ NEW: Download a chunk of files in parallel using cURL Multi
+	 *
+	 * @param array $files Array of file_info arrays (max $parallel_uploads files)
+	 * @return array Array of results
+	 */
+	private function download_chunk_parallel( $files ) {
+		Logger::info( '[Dilux SyncManager] 🚀 Downloading chunk of ' . count( $files ) . ' files in parallel (concurrency=' . $this->parallel_uploads . ')' );
+
+		$mh           = curl_multi_init();
+		$handles      = array();
+		$file_handles = array(); // Track file handles for writing
+		$results      = array();
+
+		// Prepare all cURL handles
+		foreach ( $files as $i => $file_info ) {
+			$handle_data = $this->prepare_download_handle( $file_info );
+
+			if ( $handle_data['success'] ) {
+				$handles[ $i ]      = $handle_data['handle'];
+				$file_handles[ $i ] = $handle_data['file_handle'];
+				curl_multi_add_handle( $mh, $handle_data['handle'] );
+			} else {
+				// Failed to prepare handle
+				$results[ $i ] = array(
+					'success' => false,
+					'error'   => $handle_data['error'],
+				);
+			}
+		}
+
+		// Execute all handles in parallel
+		$running = null;
+		do {
+			curl_multi_exec( $mh, $running );
+			curl_multi_select( $mh );
+		} while ( $running > 0 );
+
+		// Collect results and cleanup
+		foreach ( $handles as $i => $ch ) {
+			$response_code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			$error         = curl_error( $ch );
+
+			if ( $response_code === 200 ) {
+				$results[ $i ] = array( 'success' => true );
+			} else {
+				$results[ $i ] = array(
+					'success' => false,
+					'error'   => $error ? $error : 'HTTP ' . $response_code,
+				);
+			}
+
+			curl_multi_remove_handle( $mh, $ch );
+			curl_close( $ch );
+
+			// Close file handle
+			if ( isset( $file_handles[ $i ] ) && is_resource( $file_handles[ $i ] ) ) {
+				fclose( $file_handles[ $i ] );
+			}
+		}
+
+		curl_multi_close( $mh );
+
+		// Fill missing results
+		foreach ( $files as $i => $file_info ) {
+			if ( ! isset( $results[ $i ] ) ) {
+				$results[ $i ] = array(
+					'success' => false,
+					'error'   => 'Unknown error',
+				);
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Prepare a cURL handle for downloading a file from cloud storage
+	 * Delegates to cloud provider implementation
+	 *
+	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 */
+	private function prepare_download_handle( $file_info ) {
+		// Delegate to cloud provider (Azure, AWS, GCP, etc.)
+		return $this->cloud_client->prepare_download_handle( $file_info );
+	}
+
+	/**
+	 * Complete sync process
+	 *
+	 * @param array $progress
+	 * @return array
+	 */
+	/**
+	 * Complete sync process
+	 * OPTIMIZED: Limpia el transient de file list
+	 *
+	 * @param array $progress
+	 * @return array
+	 * @param mixed $sync_meta
+	 */
+	/**
+	 * Complete sync using new DB table architecture
+	 * ⭐ NEW: Works with custom DB table
+	 */
+	private function complete_sync_v2( $sync_meta ) {
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+
+		$stats        = DiluxDB::get_stats();
+		$end_time     = time();
+		$elapsed_time = $end_time - $sync_meta['start_time'];
+
+		// Update sync metadata
+		$sync_meta['status']   = 'completed';
+		$sync_meta['end_time'] = $end_time;
+		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
+
+		ConfigManager::set_state( PluginState::SYNCED );
+
+		Logger::info(
+			'[Dilux SyncManager] Sync completed - ' .
+				$stats['synced_files'] . ' successful, ' .
+				$stats['failed_files'] . ' failed, ' .
+				$elapsed_time . ' seconds'
+		);
+
+		return array(
+			'status'             => 'completed',
+			'total_files'        => $stats['total_files'],
+			'processed_files'    => $stats['synced_files'],
+			'successful_uploads' => $stats['synced_files'],
+			'failed_uploads'     => $stats['failed_files'],
+			'elapsed_time'       => $elapsed_time,
+			'percentage'         => 100,
+		);
+	}
+
+	/**
+	 * ⭐ NEW: Compare local files with cloud to detect deleted files
+	 * This should be called AFTER upload sync completes
+	 * Note: Cloud provider list_files() should return all files at once
+	 *
+	 * @return array ['success' => bool, 'cloud_files_found' => int, 'cloud_only_files' => int]
+	 */
+	public function compare_with_cloud() {
+		if ( ! $this->cloud_client ) {
+			return array(
+				'success' => false,
+				'message' => 'Cloud client not configured',
+			);
+		}
+
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+
+		// List ALL files from cloud storage (no pagination)
+		$cloud_files = $this->cloud_client->list_files( 'uploads/' );
+
+		if ( $cloud_files === false || empty( $cloud_files ) ) {
+			return array(
+				'success' => false,
+				'message' => 'Failed to list cloud files',
+			);
+		}
+
+		$cloud_only_files = array();
+
+		foreach ( $cloud_files as $cloud_file ) {
+			// Remove 'uploads/' prefix to get relative path for DB lookup
+			$relative_path = str_replace( 'uploads/', '/', $cloud_file['path'] );
+
+			// Check if this file exists in our local tracking table
+			global $wpdb;
+			$local_file = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT * FROM ' . DiluxDB::get_table_name() . ' WHERE file = %s',
+					$relative_path
+				)
+			);
+
+			if ( ! $local_file ) {
+				// File exists in cloud but NOT in local DB = deleted locally
+				$cloud_only_files[] = array(
+					'path' => $relative_path,
+					'size' => $cloud_file['size'],
+				);
+			} elseif ( (int) $local_file->synced === 0 && (int) $local_file->size === (int) $cloud_file['size'] ) {
+				// File already synced (same size), mark as synced
+				DiluxDB::mark_synced( $relative_path );
+			}
+		}
+
+		// Add cloud-only files as deleted
+		if ( ! empty( $cloud_only_files ) ) {
+			DiluxDB::add_cloud_only_files_batch( $cloud_only_files );
+		}
+
+		Logger::info( '[Dilux SyncManager] Cloud comparison: found ' . count( $cloud_files ) . ' cloud files, ' . count( $cloud_only_files ) . ' deleted locally' );
+
+		return array(
+			'success'           => true,
+			'cloud_files_found' => count( $cloud_files ),
+			'cloud_only_files'  => count( $cloud_only_files ),
+		);
+	}
+
+	/**
+	 * ⭐ NEW: Reverse sync (Cloud → Local)
+	 * Downloads files from cloud storage to local storage
+	 * Used when disconnecting from cloud provider
+	 *
+	 * @param string $mode 'continue' (smart, only missing) or 'scratch' (re-download all)
+	 * @return array ['success' => bool, 'message' => string, 'total_files' => int]
+	 */
+	public function start_reverse_sync( $mode = 'continue' ) {
+		$current_state = ConfigManager::get_state();
+
+		if ( $current_state !== PluginState::OFFLOADING_ACTIVE ) {
+			return array(
+				'success' => false,
+				'message' => 'Reverse sync only available when offloading is active',
+			);
+		}
+
+		if ( ! $this->cloud_client ) {
+			return array(
+				'success' => false,
+				'message' => 'Cloud client not configured',
+			);
+		}
+
+		// Test connection before listing files
+		Logger::info( '[Dilux SyncManager] Testing connection before reverse sync (mode: ' . $mode . ')' );
+		$connection_test = $this->cloud_client->test_connection();
+
+		if ( ! $connection_test['success'] ) {
+			Logger::info( '[Dilux SyncManager] Connection test failed: ' . $connection_test['message'] );
+			return array(
+				'success' => false,
+				'message' => 'Connection to cloud storage failed: ' . $connection_test['message'],
+			);
+		}
+
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+
+		// ⭐ NEW MODE LOGIC
+		if ( $mode === 'scratch' ) {
+			// SCRATCH MODE: Clear table and re-download EVERYTHING
+			Logger::info( '[Dilux SyncManager] SCRATCH mode: Clearing table and cataloging all cloud files...' );
+
+			DiluxDB::clear_table();
+
+			// List all files in cloud storage
+			$cloud_files = $this->cloud_client->list_files( 'uploads/' );
+
+			if ( empty( $cloud_files ) ) {
+				return array(
+					'success' => false,
+					'message' => 'No files found in cloud storage.',
+				);
+			}
+
+			// Mark ALL as deleted (pending download)
+			$batch_files = array();
+			foreach ( $cloud_files as $cloud_file ) {
+				$relative_path = str_replace( 'uploads/', '/', $cloud_file['path'] );
+				$batch_files[] = array(
+					'path' => $relative_path,
+					'size' => $cloud_file['size'],
+				);
+
+				if ( count( $batch_files ) >= 500 ) {
+					DiluxDB::add_cloud_only_files_batch( $batch_files );
+					$batch_files = array();
+				}
+			}
+
+			if ( ! empty( $batch_files ) ) {
+				DiluxDB::add_cloud_only_files_batch( $batch_files );
+			}
+
+			$deleted_stats = DiluxDB::get_deleted_stats();
+			Logger::info( '[Dilux SyncManager] SCRATCH mode: ' . count( $cloud_files ) . ' files marked for download' );
+
+		} else {
+			// CONTINUE MODE (default): Resume existing download
+			Logger::info( '[Dilux SyncManager] CONTINUE mode: Resuming existing download from DB...' );
+
+			// Check if there are already deleted files in DB
+			$deleted_stats = DiluxDB::get_deleted_stats();
+
+			if ( ! empty( $deleted_stats ) && $deleted_stats['files'] > 0 ) {
+				// Already have files marked for download, just resume
+				Logger::info( '[Dilux SyncManager] CONTINUE mode: Found ' . $deleted_stats['files'] . ' files already marked for download, resuming...' );
+			} else {
+				// No files marked yet, need to catalog from cloud storage (smart mode)
+				Logger::info( '[Dilux SyncManager] CONTINUE mode: No files marked yet, cataloging missing files from cloud storage...' );
+
+				global $wpdb;
+				$table_name = $wpdb->prefix . 'dilux_cs_files';
+
+				// List all files in cloud storage
+				$cloud_files = $this->cloud_client->list_files( 'uploads/' );
+
+				if ( empty( $cloud_files ) ) {
+					return array(
+						'success' => false,
+						'message' => 'No files found in cloud storage.',
+					);
+				}
+
+				// Get files already in DB (synced files)
+				$synced_files_in_db = array();
+				$db_files           = $wpdb->get_results(
+					"
                     SELECT file
                     FROM {$table_name}
                     WHERE synced = 1
-                ", ARRAY_A);
+                ",
+					ARRAY_A
+				);
 
-                foreach ($db_files as $row) {
-                    $synced_files_in_db[$row['file']] = true;
-                }
+				foreach ( $db_files as $row ) {
+					$synced_files_in_db[ $row['file'] ] = true;
+				}
 
-                // Mark only missing ones as deleted (pending download)
-                $missing_count = 0;
-                $batch_files = [];
+				// Mark only missing ones as deleted (pending download)
+				$missing_count = 0;
+				$batch_files   = array();
 
-                foreach ($cloud_files as $cloud_file) {
-                    $relative_path = str_replace('uploads/', '/', $cloud_file['path']);
+				foreach ( $cloud_files as $cloud_file ) {
+					$relative_path = str_replace( 'uploads/', '/', $cloud_file['path'] );
 
-                    // Only mark as deleted if NOT in synced DB files
-                    if (!isset($synced_files_in_db[$relative_path])) {
-                        $batch_files[] = [
-                            'path' => $relative_path,
-                            'size' => $cloud_file['size']
-                        ];
-                        $missing_count++;
+					// Only mark as deleted if NOT in synced DB files
+					if ( ! isset( $synced_files_in_db[ $relative_path ] ) ) {
+						$batch_files[] = array(
+							'path' => $relative_path,
+							'size' => $cloud_file['size'],
+						);
+						++$missing_count;
 
-                        // Batch insert every 500 files
-                        if (count($batch_files) >= 500) {
-                            DiluxDB::add_cloud_only_files_batch($batch_files);
-                            $batch_files = [];
-                        }
-                    }
-                }
+						// Batch insert every 500 files
+						if ( count( $batch_files ) >= 500 ) {
+							DiluxDB::add_cloud_only_files_batch( $batch_files );
+							$batch_files = array();
+						}
+					}
+				}
 
-                // Insert remaining files
-                if (!empty($batch_files)) {
-                    DiluxDB::add_cloud_only_files_batch($batch_files);
-                }
+				// Insert remaining files
+				if ( ! empty( $batch_files ) ) {
+					DiluxDB::add_cloud_only_files_batch( $batch_files );
+				}
 
-                $deleted_stats = DiluxDB::get_deleted_stats();
-                Logger::info('[Dilux SyncManager] CONTINUE mode: ' . $missing_count . ' missing files marked for download');
-            }
-        }
+				$deleted_stats = DiluxDB::get_deleted_stats();
+				Logger::info( '[Dilux SyncManager] CONTINUE mode: ' . $missing_count . ' missing files marked for download' );
+			}
+		}
 
-        // ⭐ Get TOTAL files in cloud (synced=1), not just pending
-        $all_stats = DiluxDB::get_stats();
-        $total_in_cloud = $all_stats['synced_files']; // All files with synced=1
-        $already_downloaded = $total_in_cloud - $deleted_stats['files'];
+		// ⭐ Get TOTAL files in cloud (synced=1), not just pending
+		$all_stats          = DiluxDB::get_stats();
+		$total_in_cloud     = $all_stats['synced_files']; // All files with synced=1
+		$already_downloaded = $total_in_cloud - $deleted_stats['files'];
 
-        // Initialize sync metadata for reverse sync
-        $sync_meta = [
-            'status' => 'started',
-            'total_files' => $total_in_cloud, // ⭐ TOTAL files in cloud (not just pending)
-            'already_downloaded' => $already_downloaded, // ⭐ Files already local
-            'start_time' => time(),
-            'last_update' => time(),
-            'is_reverse_sync' => true,
-            'reverse_mode' => $mode, // ⭐ Save mode (continue or scratch)
-            'concurrency' => $this->parallel_uploads // ⭐ Save concurrency for reverse sync
-        ];
+		// Initialize sync metadata for reverse sync
+		$sync_meta = array(
+			'status'             => 'started',
+			'total_files'        => $total_in_cloud, // ⭐ TOTAL files in cloud (not just pending)
+			'already_downloaded' => $already_downloaded, // ⭐ Files already local
+			'start_time'         => time(),
+			'last_update'        => time(),
+			'is_reverse_sync'    => true,
+			'reverse_mode'       => $mode, // ⭐ Save mode (continue or scratch)
+			'concurrency'        => $this->parallel_uploads, // ⭐ Save concurrency for reverse sync
+		);
 
-        update_option('dilux_cs_sync_meta', $sync_meta, false);
+		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
 
-        Logger::info('[Dilux SyncManager] Reverse sync started: ' . $total_in_cloud . ' total in cloud, ' .
-                 $already_downloaded . ' already downloaded, ' .
-                 $deleted_stats['files'] . ' pending (' . size_format($deleted_stats['size']) . ')');
+		Logger::info(
+			'[Dilux SyncManager] Reverse sync started: ' . $total_in_cloud . ' total in cloud, ' .
+				$already_downloaded . ' already downloaded, ' .
+				$deleted_stats['files'] . ' pending (' . size_format( $deleted_stats['size'] ) . ')'
+		);
 
-        return [
-            'success' => true,
-            'message' => 'Reverse sync started',
-            'total_files' => $total_in_cloud
-        ];
-    }
+		return array(
+			'success'     => true,
+			'message'     => 'Reverse sync started',
+			'total_files' => $total_in_cloud,
+		);
+	}
 
-    /**
-     * ⭐ NEW: Process reverse sync batch (Cloud → Local)
-     * Downloads files from Azure with size comparison (no MD5 for speed)
-     * ⭐ OPTIMIZED: Uses dynamic batch_size like normal sync
-     *
-     * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
-     * @return array Progress information
-     */
-    public function process_reverse_batch($time_limit = 8.0) {
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+	/**
+	 * ⭐ NEW: Process reverse sync batch (Cloud → Local)
+	 * Downloads files from Azure with size comparison (no MD5 for speed)
+	 * ⭐ OPTIMIZED: Uses dynamic batch_size like normal sync
+	 *
+	 * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
+	 * @return array Progress information
+	 */
+	public function process_reverse_batch( $time_limit = 8.0 ) {
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
-        $start_time = microtime(true);
-        $downloaded_this_batch = 0;
-        $max_batch_size = 12 * 1024 * 1024; // 12 MB (same as normal sync)
+		$start_time            = microtime( true );
+		$downloaded_this_batch = 0;
+		$max_batch_size        = 12 * 1024 * 1024; // 12 MB (same as normal sync)
 
-        $sync_meta = get_option('dilux_cs_sync_meta', []);
+		$sync_meta = get_option( 'dilux_cs_sync_meta', array() );
 
-        if (empty($sync_meta) || $sync_meta['status'] !== 'started' || !($sync_meta['is_reverse_sync'] ?? false)) {
-            return [
-                'status' => 'error',
-                'message' => 'No active reverse sync found'
-            ];
-        }
+		if ( empty( $sync_meta ) || $sync_meta['status'] !== 'started' || ! ( $sync_meta['is_reverse_sync'] ?? false ) ) {
+			return array(
+				'status'  => 'error',
+				'message' => 'No active reverse sync found',
+			);
+		}
 
-        // Process files until time limit
-        while (true) {
-            // ⭐ NEW: Get deleted files only (synced=1, deleted=1)
-            $files = DiluxDB::get_deleted_files($this->batch_size * 2);
+		// Process files until time limit
+		while ( true ) {
+			// ⭐ NEW: Get deleted files only (synced=1, deleted=1)
+			$files = DiluxDB::get_deleted_files( $this->batch_size * 2 );
 
-            if (empty($files)) {
-                // ⭐ FIX: Don't auto-complete here, let JavaScript handle it
-                $stats = DiluxDB::get_stats();
-                return [
-                    'status' => 'completed',
-                    'total_files' => $stats['total_files'],
-                    'processed_files' => $stats['synced_files'],
-                    'successful_downloads' => $stats['synced_files'],
-                    'failed_downloads' => $stats['failed_files'],
-                    'percentage' => 100,
-                    'pending_files' => 0,      // ⭐ Legacy name (for SYNC compatibility)
-                    'remaining_files' => 0     // ⭐ Standard name (for DISCONNECT)
-                ];
-            }
+			if ( empty( $files ) ) {
+				// ⭐ FIX: Don't auto-complete here, let JavaScript handle it
+				$stats = DiluxDB::get_stats();
+				return array(
+					'status'               => 'completed',
+					'total_files'          => $stats['total_files'],
+					'processed_files'      => $stats['synced_files'],
+					'successful_downloads' => $stats['synced_files'],
+					'failed_downloads'     => $stats['failed_files'],
+					'percentage'           => 100,
+					'pending_files'        => 0,      // ⭐ Legacy name (for SYNC compatibility)
+					'remaining_files'      => 0,     // ⭐ Standard name (for DISCONNECT)
+				);
+			}
 
-            // ⭐ OPTIMIZED: Process downloads in batches (similar to upload logic)
-            $batch_to_download = [];
+			// ⭐ OPTIMIZED: Process downloads in batches (similar to upload logic)
+			$batch_to_download = array();
 
-            foreach ($files as $file) {
-                $relative_path = $file['file'];
-                $local_path = $this->upload_dir['basedir'] . $relative_path;
-                $remote_path = 'uploads/' . ltrim($relative_path, '/');
-                $size = $file['size'];
+			foreach ( $files as $file ) {
+				$relative_path = $file['file'];
+				$local_path    = $this->upload_dir['basedir'] . $relative_path;
+				$remote_path   = 'uploads/' . ltrim( $relative_path, '/' );
+				$size          = $file['size'];
 
-                // ⭐ Check mode: only skip if 'continue' mode AND file exists with same size
-                $reverse_mode = $sync_meta['reverse_mode'] ?? 'continue';
+				// ⭐ Check mode: only skip if 'continue' mode AND file exists with same size
+				$reverse_mode = $sync_meta['reverse_mode'] ?? 'continue';
 
-                if ($reverse_mode === 'continue') {
-                    // CONTINUE mode: Skip if file exists locally with same size
-                    if (file_exists($local_path) && filesize($local_path) === $size) {
-                        DiluxDB::mark_downloaded($relative_path);
-                        continue;
-                    }
-                }
-                // SCRATCH mode: Always download (don't skip even if exists)
+				if ( $reverse_mode === 'continue' ) {
+					// CONTINUE mode: Skip if file exists locally with same size
+					if ( file_exists( $local_path ) && filesize( $local_path ) === $size ) {
+						DiluxDB::mark_downloaded( $relative_path );
+						continue;
+					}
+				}
+				// SCRATCH mode: Always download (don't skip even if exists)
 
-                // Add to download batch
-                $batch_to_download[] = [
-                    'path' => $relative_path,
-                    'local_path' => $local_path,
-                    'remote_path' => $remote_path,
-                    'size' => $size
-                ];
+				// Add to download batch
+				$batch_to_download[] = array(
+					'path'        => $relative_path,
+					'local_path'  => $local_path,
+					'remote_path' => $remote_path,
+					'size'        => $size,
+				);
 
-                // Don't exceed batch size
-                if (count($batch_to_download) >= $this->batch_size) {
-                    break;
-                }
-            }
+				// Don't exceed batch size
+				if ( count( $batch_to_download ) >= $this->batch_size ) {
+					break;
+				}
+			}
 
-            // ⭐ Pre-increment error count BEFORE download (in case of timeout)
-            foreach ($batch_to_download as $file_info) {
-                DiluxDB::increment_error($file_info['path']);
-            }
+			// ⭐ Pre-increment error count BEFORE download (in case of timeout)
+			foreach ( $batch_to_download as $file_info ) {
+				DiluxDB::increment_error( $file_info['path'] );
+			}
 
-            // ⭐ Download batch in PARALLEL (same as upload)
-            $results = $this->download_files_parallel($batch_to_download);
+			// ⭐ Download batch in PARALLEL (same as upload)
+			$results = $this->download_files_parallel( $batch_to_download );
 
-            // Update DB based on results
-            foreach ($results as $i => $result) {
-                $file_info = $batch_to_download[$i];
+			// Update DB based on results
+			foreach ( $results as $i => $result ) {
+				$file_info = $batch_to_download[ $i ];
 
-                if ($result['success']) {
-                    $mark_result = DiluxDB::mark_downloaded($file_info['path']); // ⭐ Use mark_downloaded() not mark_synced()
-                    Logger::info('[Dilux SyncManager] ✅ Downloaded and marked: ' . $file_info['path'] . ' (mark_result=' . ($mark_result ? 'true' : 'false') . ')');
-                    $downloaded_this_batch++;
-                } else {
-                    // Store error message in DB
-                    $error_msg = $result['error'] ?? 'Unknown error';
-                    DiluxDB::increment_error($file_info['path'], $error_msg);
-                    Logger::info('[Dilux SyncManager] Download failed: ' . $file_info['path'] . ' - ' . $error_msg);
-                }
-            }
+				if ( $result['success'] ) {
+					$mark_result = DiluxDB::mark_downloaded( $file_info['path'] ); // ⭐ Use mark_downloaded() not mark_synced()
+					Logger::info( '[Dilux SyncManager] ✅ Downloaded and marked: ' . $file_info['path'] . ' (mark_result=' . ( $mark_result ? 'true' : 'false' ) . ')' );
+					++$downloaded_this_batch;
+				} else {
+					// Store error message in DB
+					$error_msg = $result['error'] ?? 'Unknown error';
+					DiluxDB::increment_error( $file_info['path'], $error_msg );
+					Logger::info( '[Dilux SyncManager] Download failed: ' . $file_info['path'] . ' - ' . $error_msg );
+				}
+			}
 
-            // Check time limit
-            $elapsed = microtime(true) - $start_time;
-            if ($elapsed >= $time_limit) {
-                Logger::info('[Dilux SyncManager] Time limit reached (' . round($elapsed, 2) . 's), ending batch');
-                break;
-            }
-        }
+			// Check time limit
+			$elapsed = microtime( true ) - $start_time;
+			if ( $elapsed >= $time_limit ) {
+				Logger::info( '[Dilux SyncManager] Time limit reached (' . round( $elapsed, 2 ) . 's), ending batch' );
+				break;
+			}
+		}
 
-        // ⭐ Calculate progress including already downloaded files
-        $total_in_cloud = $sync_meta['total_files']; // Total files in cloud (synced=1)
-        $already_downloaded = $sync_meta['already_downloaded'] ?? 0; // Files already local when started
-        $remaining_deleted = DiluxDB::count_deleted_files(); // Files still pending
-        $downloaded_in_session = ($total_in_cloud - $already_downloaded) - $remaining_deleted; // Downloaded in THIS session
-        $total_downloaded = $already_downloaded + $downloaded_in_session; // Total including previous
-        $percentage = $total_in_cloud > 0 ? round(($total_downloaded / $total_in_cloud) * 100, 1) : 100;
+		// ⭐ Calculate progress including already downloaded files
+		$total_in_cloud        = $sync_meta['total_files']; // Total files in cloud (synced=1)
+		$already_downloaded    = $sync_meta['already_downloaded'] ?? 0; // Files already local when started
+		$remaining_deleted     = DiluxDB::count_deleted_files(); // Files still pending
+		$downloaded_in_session = ( $total_in_cloud - $already_downloaded ) - $remaining_deleted; // Downloaded in THIS session
+		$total_downloaded      = $already_downloaded + $downloaded_in_session; // Total including previous
+		$percentage            = $total_in_cloud > 0 ? round( ( $total_downloaded / $total_in_cloud ) * 100, 1 ) : 100;
 
-        Logger::debug('[Dilux SyncManager] 🔍 Progress: total=' . $total_in_cloud .
-                 ', already=' . $already_downloaded .
-                 ', session=' . $downloaded_in_session .
-                 ', total_downloaded=' . $total_downloaded .
-                 ', pending=' . $remaining_deleted .
-                 ', percentage=' . $percentage . '%');
+		Logger::debug(
+			'[Dilux SyncManager] 🔍 Progress: total=' . $total_in_cloud .
+				', already=' . $already_downloaded .
+				', session=' . $downloaded_in_session .
+				', total_downloaded=' . $total_downloaded .
+				', pending=' . $remaining_deleted .
+				', percentage=' . $percentage . '%'
+		);
 
-        return [
-            'status' => 'processing',
-            'total_files' => $total_in_cloud,
-            'processed_files' => $total_downloaded, // ⭐ Total including already downloaded
-            'successful_downloads' => $total_downloaded,
-            'failed_downloads' => 0, // TODO: track failed downloads separately
-            'percentage' => $percentage,
-            'downloaded_this_batch' => $downloaded_this_batch,
-            'pending_files' => $remaining_deleted,    // ⭐ Legacy name (for SYNC compatibility)
-            'remaining_files' => $remaining_deleted   // ⭐ Standard name (for DISCONNECT)
-        ];
-    }
+		return array(
+			'status'                => 'processing',
+			'total_files'           => $total_in_cloud,
+			'processed_files'       => $total_downloaded, // ⭐ Total including already downloaded
+			'successful_downloads'  => $total_downloaded,
+			'failed_downloads'      => 0, // TODO: track failed downloads separately
+			'percentage'            => $percentage,
+			'downloaded_this_batch' => $downloaded_this_batch,
+			'pending_files'         => $remaining_deleted,    // ⭐ Legacy name (for SYNC compatibility)
+			'remaining_files'       => $remaining_deleted,   // ⭐ Standard name (for DISCONNECT)
+		);
+	}
 
-    /**
-     * Complete reverse sync
-     */
-    private function complete_reverse_sync($sync_meta) {
-        require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+	/**
+	 * Complete reverse sync
+	 */
+	private function complete_reverse_sync( $sync_meta ) {
+		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
-        $stats = DiluxDB::get_stats();
-        $end_time = time();
-        $elapsed_time = $end_time - $sync_meta['start_time'];
+		$stats        = DiluxDB::get_stats();
+		$end_time     = time();
+		$elapsed_time = $end_time - $sync_meta['start_time'];
 
-        // Update metadata
-        $sync_meta['status'] = 'completed';
-        $sync_meta['end_time'] = $end_time;
-        update_option('dilux_cs_sync_meta', $sync_meta, false);
+		// Update metadata
+		$sync_meta['status']   = 'completed';
+		$sync_meta['end_time'] = $end_time;
+		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
 
-        // ⭐ DON'T change state here - let user decide when to deactivate offloading
-        // State remains OFFLOADING_ACTIVE until user clicks "Deactivate Offloading"
+		// ⭐ DON'T change state here - let user decide when to deactivate offloading
+		// State remains OFFLOADING_ACTIVE until user clicks "Deactivate Offloading"
 
-        Logger::info('[Dilux SyncManager] Reverse sync completed - ' .
-                 $stats['synced_files'] . ' downloaded, ' .
-                 $stats['failed_files'] . ' failed, ' .
-                 $elapsed_time . ' seconds');
+		Logger::info(
+			'[Dilux SyncManager] Reverse sync completed - ' .
+				$stats['synced_files'] . ' downloaded, ' .
+				$stats['failed_files'] . ' failed, ' .
+				$elapsed_time . ' seconds'
+		);
 
-        return [
-            'status' => 'completed',
-            'total_files' => $stats['total_files'],
-            'processed_files' => $stats['synced_files'],
-            'successful_downloads' => $stats['synced_files'],
-            'failed_downloads' => $stats['failed_files'],
-            'elapsed_time' => $elapsed_time,
-            'percentage' => 100,
-            'message' => 'Disconnected from cloud provider. Files restored to local storage.'
-        ];
-    }
+		return array(
+			'status'               => 'completed',
+			'total_files'          => $stats['total_files'],
+			'processed_files'      => $stats['synced_files'],
+			'successful_downloads' => $stats['synced_files'],
+			'failed_downloads'     => $stats['failed_files'],
+			'elapsed_time'         => $elapsed_time,
+			'percentage'           => 100,
+			'message'              => 'Disconnected from cloud provider. Files restored to local storage.',
+		);
+	}
 
-    private function complete_sync($progress) {
-        $progress['status'] = 'completed';
-        $progress['current_file'] = '';
-        $progress['end_time'] = time();
-        $progress['last_update'] = time();
+	private function complete_sync( $progress ) {
+		$progress['status']       = 'completed';
+		$progress['current_file'] = '';
+		$progress['end_time']     = time();
+		$progress['last_update']  = time();
 
-        ConfigManager::save_sync_progress($progress);
-        ConfigManager::set_state(PluginState::SYNCED);
+		ConfigManager::save_sync_progress( $progress );
+		ConfigManager::set_state( PluginState::SYNCED );
 
-        $elapsed_time = $progress['end_time'] - $progress['start_time'];
+		$elapsed_time = $progress['end_time'] - $progress['start_time'];
 
-        // PERSIST failed files for manual retry
-        if (!empty($progress['failed_files'])) {
-            ConfigManager::add_failed_files($progress['failed_files']);
-            Logger::info('[Dilux SyncManager] Saved ' . count($progress['failed_files']) . ' failed files for retry');
-        }
+		// PERSIST failed files for manual retry
+		if ( ! empty( $progress['failed_files'] ) ) {
+			ConfigManager::add_failed_files( $progress['failed_files'] );
+			Logger::info( '[Dilux SyncManager] Saved ' . count( $progress['failed_files'] ) . ' failed files for retry' );
+		}
 
-        // OPTIMIZED: Clear file list transient (no longer needed)
-        delete_transient('dilux_cs_full_file_list');
-        Logger::info('[Dilux SyncManager] Cleared file list transient');
+		// OPTIMIZED: Clear file list transient (no longer needed)
+		delete_transient( 'dilux_cs_full_file_list' );
+		Logger::info( '[Dilux SyncManager] Cleared file list transient' );
 
-        Logger::log('[Dilux SyncManager] Sync completed - ' .
-                   $progress['successful_uploads'] . ' successful, ' .
-                   $progress['failed_uploads'] . ' failed, ' .
-                   $elapsed_time . ' seconds', 'info', true);
+		Logger::log(
+			'[Dilux SyncManager] Sync completed - ' .
+					$progress['successful_uploads'] . ' successful, ' .
+					$progress['failed_uploads'] . ' failed, ' .
+					$elapsed_time . ' seconds',
+			'info',
+			true
+		);
 
-        return [
-            'status' => 'completed',
-            'total_files' => $progress['total_files'],
-            'successful_uploads' => $progress['successful_uploads'],
-            'failed_uploads' => $progress['failed_uploads'],
-            'elapsed_time' => $elapsed_time,
-            'failed_files' => $progress['failed_files'] ?? []
-        ];
-    }
+		return array(
+			'status'             => 'completed',
+			'total_files'        => $progress['total_files'],
+			'successful_uploads' => $progress['successful_uploads'],
+			'failed_uploads'     => $progress['failed_uploads'],
+			'elapsed_time'       => $elapsed_time,
+			'failed_files'       => $progress['failed_files'] ?? array(),
+		);
+	}
 }

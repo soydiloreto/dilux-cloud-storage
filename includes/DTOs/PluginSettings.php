@@ -1,8 +1,14 @@
 <?php
+/**
+ * Plugin user-facing settings value object.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -15,190 +21,196 @@ if (!defined('ABSPATH')) {
  */
 class PluginSettings {
 
-    private bool $debugEnabled;
-    private bool $keepLocalFiles;
-    private bool $autoActivateOffloading;
-    private bool $forceHttpsOnCloud;
-    // NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
-    private int $timeout;
-    private int $maxFileSize;
-    private string $allowedFileTypes;
+	/** @var bool */
+	private bool $debugEnabled;
+	/** @var bool */
+	private bool $keepLocalFiles;
+	/** @var bool */
+	private bool $autoActivateOffloading;
+	/** @var bool */
+	private bool $forceHttpsOnCloud;
+	// NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
+	private int $timeout;
+	/** @var int */
+	private int $maxFileSize;
+	/** @var string */
+	private string $allowedFileTypes;
 
-    /**
-     * Constructor
-     *
-     * @param bool $debugEnabled
-     * @param bool $keepLocalFiles
-     * @param bool $autoActivateOffloading
-     * @param bool $forceHttpsOnCloud
-     * @param int $timeout
-     * @param int $maxFileSize
-     * @param string $allowedFileTypes
-     */
-    public function __construct(
-        bool $debugEnabled = false,
-        bool $keepLocalFiles = true,
-        bool $autoActivateOffloading = true,
-        bool $forceHttpsOnCloud = true,
-        int $timeout = 60,
-        int $maxFileSize = 20971520,
-        string $allowedFileTypes = '*'
-    ) {
-        // Validations
-        if ($timeout <= 0) {
-            throw new \InvalidArgumentException('Timeout must be greater than 0');
-        }
-        if ($maxFileSize <= 0) {
-            throw new \InvalidArgumentException('Max file size must be greater than 0');
-        }
+	/**
+	 * Constructor
+	 *
+	 * @param bool   $debugEnabled
+	 * @param bool   $keepLocalFiles
+	 * @param bool   $autoActivateOffloading
+	 * @param bool   $forceHttpsOnCloud
+	 * @param int    $timeout
+	 * @param int    $maxFileSize
+	 * @param string $allowedFileTypes
+	 */
+	public function __construct(
+		bool $debugEnabled = false,
+		bool $keepLocalFiles = true,
+		bool $autoActivateOffloading = true,
+		bool $forceHttpsOnCloud = true,
+		int $timeout = 60,
+		int $maxFileSize = 20971520,
+		string $allowedFileTypes = '*'
+	) {
+		// Validations
+		if ( $timeout <= 0 ) {
+			throw new \InvalidArgumentException( 'Timeout must be greater than 0' );
+		}
+		if ( $maxFileSize <= 0 ) {
+			throw new \InvalidArgumentException( 'Max file size must be greater than 0' );
+		}
 
-        $this->debugEnabled = $debugEnabled;
-        $this->keepLocalFiles = $keepLocalFiles;
-        $this->autoActivateOffloading = $autoActivateOffloading;
-        $this->forceHttpsOnCloud = $forceHttpsOnCloud;
-        // NOTE: use_https removed - HTTPS is always enforced
-        $this->timeout = $timeout;
-        $this->maxFileSize = $maxFileSize;
-        $this->allowedFileTypes = $allowedFileTypes;
-    }
+		$this->debugEnabled           = $debugEnabled;
+		$this->keepLocalFiles         = $keepLocalFiles;
+		$this->autoActivateOffloading = $autoActivateOffloading;
+		$this->forceHttpsOnCloud      = $forceHttpsOnCloud;
+		// NOTE: use_https removed - HTTPS is always enforced
+		$this->timeout          = $timeout;
+		$this->maxFileSize      = $maxFileSize;
+		$this->allowedFileTypes = $allowedFileTypes;
+	}
 
-    /**
-     * Create from array configuration
-     *
-     * @param array $config
-     * @return self
-     */
-    public static function fromArray(array $config): self {
-        return new self(
-            $config['debug_enabled'] ?? false,
-            $config['keep_local_files'] ?? true,
-            $config['auto_activate_offloading'] ?? true,
-            $config['force_https_on_cloud'] ?? true,
-            $config['timeout'] ?? 60,
-            $config['max_file_size'] ?? 20971520,
-            $config['allowed_file_types'] ?? '*'
-        );
-    }
+	/**
+	 * Create from array configuration
+	 *
+	 * @param array $config
+	 * @return self
+	 */
+	public static function fromArray( array $config ): self {
+		return new self(
+			$config['debug_enabled'] ?? false,
+			$config['keep_local_files'] ?? true,
+			$config['auto_activate_offloading'] ?? true,
+			$config['force_https_on_cloud'] ?? true,
+			$config['timeout'] ?? 60,
+			$config['max_file_size'] ?? 20971520,
+			$config['allowed_file_types'] ?? '*'
+		);
+	}
 
-    /**
-     * Create from POST data
-     *
-     * @param array $post POST data from form
-     * @return self
-     */
-    public static function fromPost(array $post): self {
-        return new self(
-            isset($post['enable_debug_logging']),
-            $post['keep_local_files'] ?? true,
-            $post['auto_activate_offloading'] ?? true,
-            isset($post['force_https_on_cloud']),
-            intval($post['timeout'] ?? 60),
-            intval($post['max_file_size'] ?? 20) * 1048576, // Convert MB to bytes
-            sanitize_text_field($post['allowed_file_types'] ?? '*')
-        );
-    }
+	/**
+	 * Create from POST data
+	 *
+	 * @param array $post POST data from form
+	 * @return self
+	 */
+	public static function fromPost( array $post ): self {
+		return new self(
+			isset( $post['enable_debug_logging'] ),
+			$post['keep_local_files'] ?? true,
+			$post['auto_activate_offloading'] ?? true,
+			isset( $post['force_https_on_cloud'] ),
+			intval( $post['timeout'] ?? 60 ),
+			intval( $post['max_file_size'] ?? 20 ) * 1048576, // Convert MB to bytes
+			sanitize_text_field( $post['allowed_file_types'] ?? '*' )
+		);
+	}
 
-    /**
-     * Check if debug is enabled
-     *
-     * @return bool
-     */
-    public function isDebugEnabled(): bool {
-        return $this->debugEnabled;
-    }
+	/**
+	 * Check if debug is enabled
+	 *
+	 * @return bool
+	 */
+	public function isDebugEnabled(): bool {
+		return $this->debugEnabled;
+	}
 
-    /**
-     * Check if should keep local files
-     *
-     * @return bool
-     */
-    public function shouldKeepLocalFiles(): bool {
-        return $this->keepLocalFiles;
-    }
+	/**
+	 * Check if should keep local files
+	 *
+	 * @return bool
+	 */
+	public function shouldKeepLocalFiles(): bool {
+		return $this->keepLocalFiles;
+	}
 
-    /**
-     * Check if should auto-activate offloading after sync
-     *
-     * @return bool
-     */
-    public function shouldAutoActivateOffloading(): bool {
-        return $this->autoActivateOffloading;
-    }
+	/**
+	 * Check if should auto-activate offloading after sync
+	 *
+	 * @return bool
+	 */
+	public function shouldAutoActivateOffloading(): bool {
+		return $this->autoActivateOffloading;
+	}
 
-    /**
-     * Check if cloud-host URLs should be re-upgraded to https://.
-     *
-     * @return bool
-     */
-    public function shouldForceHttpsOnCloud(): bool {
-        return $this->forceHttpsOnCloud;
-    }
+	/**
+	 * Check if cloud-host URLs should be re-upgraded to https://.
+	 *
+	 * @return bool
+	 */
+	public function shouldForceHttpsOnCloud(): bool {
+		return $this->forceHttpsOnCloud;
+	}
 
-    // NOTE: isHttpsEnabled() removed - HTTPS is always enforced (Azure requirement)
+	// NOTE: isHttpsEnabled() removed - HTTPS is always enforced (Azure requirement)
 
-    /**
-     * Get timeout in seconds
-     *
-     * @return int
-     */
-    public function getTimeout(): int {
-        return $this->timeout;
-    }
+	/**
+	 * Get timeout in seconds
+	 *
+	 * @return int
+	 */
+	public function getTimeout(): int {
+		return $this->timeout;
+	}
 
-    /**
-     * Get max file size in bytes
-     *
-     * @return int
-     */
-    public function getMaxFileSize(): int {
-        return $this->maxFileSize;
-    }
+	/**
+	 * Get max file size in bytes
+	 *
+	 * @return int
+	 */
+	public function getMaxFileSize(): int {
+		return $this->maxFileSize;
+	}
 
-    /**
-     * Get max file size in megabytes
-     *
-     * @return float
-     */
-    public function getMaxFileSizeMB(): float {
-        return $this->maxFileSize / 1048576;  // 1024 * 1024
-    }
+	/**
+	 * Get max file size in megabytes
+	 *
+	 * @return float
+	 */
+	public function getMaxFileSizeMB(): float {
+		return $this->maxFileSize / 1048576;  // 1024 * 1024
+	}
 
-    /**
-     * Get allowed file types
-     *
-     * @return string
-     */
-    public function getAllowedFileTypes(): string {
-        return $this->allowedFileTypes;
-    }
+	/**
+	 * Get allowed file types
+	 *
+	 * @return string
+	 */
+	public function getAllowedFileTypes(): string {
+		return $this->allowedFileTypes;
+	}
 
-    /**
-     * Convert to array format
-     *
-     * @return array
-     */
-    public function toArray(): array {
-        return [
-            'debug_enabled' => $this->debugEnabled,
-            'keep_local_files' => $this->keepLocalFiles,
-            'auto_activate_offloading' => $this->autoActivateOffloading,
-            'force_https_on_cloud' => $this->forceHttpsOnCloud,
-            // NOTE: use_https removed - HTTPS is always enforced
-            'timeout' => $this->timeout,
-            'max_file_size' => $this->maxFileSize,
-            'allowed_file_types' => $this->allowedFileTypes
-        ];
-    }
+	/**
+	 * Convert to array format
+	 *
+	 * @return array
+	 */
+	public function toArray(): array {
+		return array(
+			'debug_enabled'            => $this->debugEnabled,
+			'keep_local_files'         => $this->keepLocalFiles,
+			'auto_activate_offloading' => $this->autoActivateOffloading,
+			'force_https_on_cloud'     => $this->forceHttpsOnCloud,
+			// NOTE: use_https removed - HTTPS is always enforced
+			'timeout'                  => $this->timeout,
+			'max_file_size'            => $this->maxFileSize,
+			'allowed_file_types'       => $this->allowedFileTypes,
+		);
+	}
 
-    /**
-     * Merge with updates (create new instance with updated fields)
-     *
-     * @param array $updates Array of fields to update
-     * @return self New instance with updated fields
-     */
-    public function merge(array $updates): self {
-        $current = $this->toArray();
-        $merged = array_merge($current, $updates);
-        return self::fromArray($merged);
-    }
+	/**
+	 * Merge with updates (create new instance with updated fields)
+	 *
+	 * @param array $updates Array of fields to update
+	 * @return self New instance with updated fields
+	 */
+	public function merge( array $updates ): self {
+		$current = $this->toArray();
+		$merged  = array_merge( $current, $updates );
+		return self::fromArray( $merged );
+	}
 }
