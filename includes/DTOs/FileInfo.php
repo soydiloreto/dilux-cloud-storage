@@ -21,9 +21,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class FileInfo {
 
+	/** @var int */
 	private int $size;
+	/** @var ?string */
 	private ?string $md5;
+	/** @var ?string */
 	private ?string $lastModified;
+	/** @var string */
 	private string $path;
 
 	/**

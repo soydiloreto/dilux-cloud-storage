@@ -47,9 +47,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class AzureProvider implements CloudStorageClientInterface {
 
+	/** @var string */
 	private string $storage_account;
+	/** @var string */
 	private string $container_name;
+	/** @var string */
 	private string $access_key;
+	/** @var string */
 	private string $endpoint;
 	// NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
 

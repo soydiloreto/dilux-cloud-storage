@@ -23,14 +23,23 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SyncResult {
 
+	/** @var bool */
 	private bool $success;
+	/** @var string */
 	private string $status;
+	/** @var int */
 	private int $totalFiles;
+	/** @var int */
 	private int $successfulUploads;
+	/** @var int */
 	private int $failedUploads;
+	/** @var int */
 	private int $skippedFiles;
+	/** @var int */
 	private int $duration;
+	/** @var array */
 	private array $errors;
+	/** @var array */
 	private array $statistics;
 
 	/**

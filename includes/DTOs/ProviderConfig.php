@@ -21,7 +21,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ProviderConfig {
 
+	/** @var string */
 	private string $cloudProvider;
+	/** @var array */
 	private array $providerConfig;
 
 	/**

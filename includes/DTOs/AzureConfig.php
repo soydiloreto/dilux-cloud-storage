@@ -21,9 +21,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class AzureConfig {
 
+	/** @var string */
 	private string $storageAccount;
+	/** @var string */
 	private string $containerName;
+	/** @var string */
 	private string $accessKey;
+	/** @var string */
 	private string $endpoint;
 
 	/**

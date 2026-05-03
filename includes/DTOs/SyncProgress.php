@@ -23,13 +23,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SyncProgress {
 
+	/** @var string */
 	private string $status;
+	/** @var int */
 	private int $totalFiles;
+	/** @var int */
 	private int $processedFiles;
+	/** @var int */
 	private int $successfulUploads;
+	/** @var int */
 	private int $failedUploads;
+	/** @var int */
 	private int $startTime;
+	/** @var int */
 	private int $lastUpdate;
+	/** @var array */
 	private array $errors;
 
 	/**

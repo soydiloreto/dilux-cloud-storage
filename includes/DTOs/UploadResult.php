@@ -22,9 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class UploadResult {
 
+	/** @var bool */
 	private bool $success;
+	/** @var string */
 	private string $url;
+	/** @var string */
 	private string $remotePath;
+	/** @var string */
 	private string $error;
 
 	/**

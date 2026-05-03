@@ -21,10 +21,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SyncFilter {
 
+	/** @var string */
 	private string $allowedFileTypes;
+	/** @var int */
 	private int $maxFileSize;
+	/** @var array */
 	private array $excludedPaths;
+	/** @var bool */
 	private bool $includeHiddenFiles;
+	/** @var bool */
 	private bool $includeSystemFiles;
 
 	/**

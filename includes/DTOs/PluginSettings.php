@@ -21,13 +21,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PluginSettings {
 
+	/** @var bool */
 	private bool $debugEnabled;
+	/** @var bool */
 	private bool $keepLocalFiles;
+	/** @var bool */
 	private bool $autoActivateOffloading;
+	/** @var bool */
 	private bool $forceHttpsOnCloud;
 	// NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
 	private int $timeout;
+	/** @var int */
 	private int $maxFileSize;
+	/** @var string */
 	private string $allowedFileTypes;
 
 	/**

@@ -121,8 +121,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SyncManager {
 
+	/** @var mixed */
 	private $cloud_client;
+	/** @var mixed */
 	private $upload_dir;
+	/** @var mixed */
 	private $batch_size        = 100; // Files per batch - OPTIMIZED: Dynamic based on concurrency (will be calculated)
 	private $parallel_uploads  = 5; // Concurrent uploads using cURL Multi - DEFAULT: Can be changed via UI
 	private $chunked_threshold = 10485760; // 10MB - Files larger than this use chunked upload

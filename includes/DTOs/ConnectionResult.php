@@ -21,7 +21,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ConnectionResult {
 
+	/** @var bool */
 	private bool $success;
+	/** @var string */
 	private string $message;
 
 	/**

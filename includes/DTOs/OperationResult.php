@@ -21,7 +21,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class OperationResult {
 
+	/** @var bool */
 	private bool $success;
+	/** @var string */
 	private string $error;
 
 	/**

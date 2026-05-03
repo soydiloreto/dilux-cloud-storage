@@ -22,7 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PluginConfig {
 
+	/** @var ProviderConfig */
 	private ProviderConfig $provider;
+	/** @var PluginSettings */
 	private PluginSettings $settings;
 
 	/**
