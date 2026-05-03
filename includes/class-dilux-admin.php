@@ -26,7 +26,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Admin interface for Cloud Storage plugin.
  */
-
 class Admin {
 
 	/**
@@ -47,7 +46,7 @@ class Admin {
 		\add_action( 'wp_ajax_dilux_cs_migration_action', array( __CLASS__, 'ajax_migration_action' ) );
 		\add_action( 'wp_ajax_dilux_cs_test_check', array( __CLASS__, 'ajax_test_check' ) );
 		\add_action( 'wp_ajax_dilux_cs_scan_files', array( __CLASS__, 'ajax_scan_files' ) );
-		// \add_action('wp_ajax_dilux_cs_start_sync', [__CLASS__, 'ajax_start_sync']); // ⭐ DISABLED: Using new handler in class-dilux-plugin-enhanced.php
+		// DISABLED: ajax_dilux_cs_start_sync now handled by Plugin::ajax_cs_start_sync in class-dilux-plugin-enhanced.php (legacy handler removed).
 		\add_action( 'wp_ajax_dilux_cs_cancel_sync', array( __CLASS__, 'ajax_cancel_sync' ) );
 		\add_action( 'wp_ajax_dilux_cs_mark_sync_complete', array( __CLASS__, 'ajax_mark_sync_complete' ) );
 		\add_action( 'wp_ajax_dilux_cs_delete_local_files', array( __CLASS__, 'ajax_delete_local_files' ) );
@@ -217,6 +216,8 @@ class Admin {
 
 	/**
 	 * Enqueue admin assets (CSS/JS)
+	 *
+	 * @param mixed $hook_suffix
 	 */
 	public static function enqueue_admin_assets( $hook_suffix ) {
 		// Only load on our plugin pages
@@ -267,6 +268,8 @@ class Admin {
 
 	/**
 	 * Render tab content based on current tab
+	 *
+	 * @param mixed $current_tab
 	 */
 	private static function render_tab_content( $current_tab ) {
 		$template_path = '';
@@ -510,7 +513,11 @@ class Admin {
 		$full_template_path = DILUX_CS_PLUGIN_DIR . 'templates/' . $template_path;
 
 		if ( file_exists( $full_template_path ) ) {
-			// Extract template data to variables
+			// Templates expect each value of $template_data to be available as
+			// a local variable. The keys are static (set in this method) and
+			// never derived from user input, so the documented extract() risk
+			// (variable shadowing from untrusted keys) does not apply here.
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Keys are static and trusted; templates depend on this contract.
 			extract( $template_data );
 			include $full_template_path;
 		} else {
@@ -805,6 +812,9 @@ class Admin {
 
 	/**
 	 * Handle configuration save
+	 *
+	 * @throws \Exception When PluginSettings/ProviderConfig validation fails inside
+	 *                   the inner try blocks (caught and converted to error notices).
 	 */
 	public static function save_config() {
 		// Check nonce for security
@@ -1607,6 +1617,8 @@ class Admin {
 
 	/**
 	 * Recursively cleanup empty directories
+	 *
+	 * @param mixed $path
 	 */
 	private static function cleanup_empty_directories( $path ) {
 		if ( ! is_dir( $path ) ) {
@@ -1634,7 +1646,11 @@ class Admin {
 		// under wp-content/uploads/.
 		$upload_dir = wp_upload_dir();
 		if ( empty( $entries ) && realpath( $path ) !== realpath( $upload_dir['basedir'] ) ) {
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Path is verified empty and confined to wp-content/uploads/ subtree.
+			// Best-effort rmdir on an already-empty directory inside the
+			// uploads tree. The @ silencing matches the WP-core pattern
+			// for idempotent cleanup — a "directory not empty" race
+			// during plugin uninstall is harmless.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.PHP.NoSilencedErrors.Discouraged -- Idempotent cleanup of already-verified-empty directory.
 			@rmdir( $path );
 		}
 	}
@@ -1774,10 +1790,11 @@ class Admin {
 	}
 
 	/**
-	 * AJAX: Retry failed files
+	 * AJAX: Retry failed files (deprecated — kept as a stub).
+	 *
+	 * Old method removed in favor of the unified sync flow. Retry is now
+	 * handled by Plugin::ajax_cs_start_sync with retry_failed=1.
 	 */
-	// ⭐ OLD METHOD REMOVED - Now using unified sync flow
-	// Retry is now handled by Plugin::ajax_cs_start_sync with retry_failed=1
 	public static function ajax_retry_failed() {
 		wp_send_json_error( esc_html__( 'This endpoint is deprecated. Use ajax_cs_start_sync with retry_failed parameter instead.', 'dilux-cloud-storage' ) );
 	}

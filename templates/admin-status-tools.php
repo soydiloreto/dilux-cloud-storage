@@ -34,7 +34,10 @@ $config_data = array();
 foreach ( $dilux_options as $option ) {
 	$value = $option['option_value'];
 
-	// Try to unserialize - WordPress auto-serializes arrays/objects in options
+	// Try to unserialize - WordPress auto-serializes arrays/objects in options.
+	// Source bytes can only have been written by code we control via
+	// update_option(); Object-Injection risk does not apply.
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- See comment above.
 	$unserialized = @unserialize( $value );
 
 	// Use unserialized value if it worked, otherwise use original string

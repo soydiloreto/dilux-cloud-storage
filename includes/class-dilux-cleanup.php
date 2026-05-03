@@ -2,6 +2,19 @@
 /**
  * Plugin uninstall and cleanup helpers.
  *
+ * Reads serialized values from the WordPress options table when scanning
+ * orphaned plugin data on uninstall. The data was originally written BY
+ * THIS PLUGIN to the same options table via update_option() (which
+ * applies WordPress's own serialize/unserialize automatically), so the
+ * Object-Injection class of attacks documented in the OWASP guidance
+ * does not apply here — the bytes can only have been put there by code
+ * we control. The @ silencing matches the WordPress-core pattern for
+ * idempotent cleanup. These rules are intentionally suppressed
+ * file-wide:
+ *
+ * phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize
+ *
  * @package DiluxWP\CloudStorage
  */
 

@@ -36,6 +36,8 @@ class AzureConfig {
 	 * @param string $storageAccount
 	 * @param string $containerName
 	 * @param string $accessKey
+	 *
+	 * @throws \InvalidArgumentException When any required field is empty.
 	 */
 	public function __construct( string $storageAccount, string $containerName, string $accessKey ) {
 		if ( empty( $storageAccount ) ) {
@@ -59,7 +61,7 @@ class AzureConfig {
 	 *
 	 * @param array $config
 	 * @return self
-	 * @throws \InvalidArgumentException
+	 * @throws \InvalidArgumentException When the array is missing required keys or values are invalid.
 	 */
 	public static function fromArray( array $config ): self {
 		return new self(

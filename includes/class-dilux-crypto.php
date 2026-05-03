@@ -42,6 +42,7 @@ class Crypto {
 
 	/**
 	 * @return bool True if the given value already has the encrypted prefix.
+	 * @param string $value
 	 */
 	public static function is_encrypted( string $value ): bool {
 		return strncmp( $value, self::PREFIX, strlen( self::PREFIX ) ) === 0;

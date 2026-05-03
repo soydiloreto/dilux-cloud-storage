@@ -51,6 +51,8 @@ class SyncProgress {
 	 * @param int    $startTime
 	 * @param int    $lastUpdate
 	 * @param array  $errors
+	 *
+	 * @throws \InvalidArgumentException When status is not a valid SyncStatus value or counts are negative.
 	 */
 	public function __construct(
 		string $status = SyncStatus::IDLE,

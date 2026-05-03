@@ -101,6 +101,9 @@ class DiluxDB {
 	/**
 	 * Add file to tracking table
 	 * Uses REPLACE to handle duplicates
+	 *
+	 * @param string $file_path
+	 * @param int    $size
 	 */
 	public static function add_file( $file_path, $size ) {
 		global $wpdb;
@@ -128,6 +131,8 @@ class DiluxDB {
 
 	/**
 	 * Add multiple files in batch (more efficient)
+	 *
+	 * @param mixed $files
 	 */
 	public static function add_files_batch( $files ) {
 		global $wpdb;
@@ -170,6 +175,8 @@ class DiluxDB {
 
 	/**
 	 * Mark file as successfully synced (uploaded to cloud)
+	 *
+	 * @param mixed $file_path
 	 */
 	public static function mark_synced( $file_path ) {
 		global $wpdb;
@@ -203,6 +210,8 @@ class DiluxDB {
 	/**
 	 * Mark file as successfully downloaded (reverse sync)
 	 * Sets deleted=0 since file now exists locally
+	 *
+	 * @param mixed $file_path
 	 */
 	public static function mark_downloaded( $file_path ) {
 		global $wpdb;
@@ -229,6 +238,9 @@ class DiluxDB {
 
 	/**
 	 * Update transferred bytes for a file
+	 *
+	 * @param mixed $file_path
+	 * @param mixed $bytes_transferred
 	 */
 	public static function update_progress( $file_path, $bytes_transferred ) {
 		global $wpdb;
@@ -285,6 +297,9 @@ class DiluxDB {
 
 	/**
 	 * Set upload_id for multipart upload tracking
+	 *
+	 * @param string $file_path
+	 * @param string $upload_id
 	 */
 	public static function set_upload_id( $file_path, $upload_id ) {
 		global $wpdb;

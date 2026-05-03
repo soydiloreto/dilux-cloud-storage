@@ -336,7 +336,7 @@ class Plugin {
 						)
 					);
 
-					if ( $exists == 0 ) {
+					if ( (int) $exists === 0 ) {
 						$new_files[]     = array(
 							'path' => $relative_path,
 							'size' => $file_info['size'],
@@ -629,7 +629,7 @@ class Plugin {
 					++$already_in_db;
 
 					// If file was not synced but same size, mark as synced
-					if ( ! $db_file['synced'] && $db_file['size'] == $file['size'] ) {
+					if ( ! $db_file['synced'] && (int) $db_file['size'] === (int) $file['size'] ) {
 						Logger::info( '[Dilux Plugin] Already synced file found: ' . $relative_path );
 						$wpdb->update(
 							$table_name,
@@ -828,7 +828,7 @@ class Plugin {
 						)
 					);
 
-					if ( $exists == 0 ) {
+					if ( (int) $exists === 0 ) {
 						// File not in DB = new file
 						Logger::info( '[Dilux Calculate Sync] NEW FILE FOUND: ' . $relative_path . ' (size: ' . size_format( $file_info['size'] ) . ')' );
 						$new_files[]     = array(

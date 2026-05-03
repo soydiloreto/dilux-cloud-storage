@@ -13,8 +13,11 @@
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fread
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
  * phpcs:disable WordPress.WP.AlternativeFunctions.unlink_unlink
  * phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
+ * phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged
  *
  * @package DiluxWP\CloudStorage
  */
@@ -33,7 +36,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Custom stream wrapper that redirects file operations to cloud storage.
  * This is the core component that makes WordPress write directly to cloud.
  */
-
 class CloudStreamWrapper {
 
 	/** @var string Protocol name */
@@ -74,13 +76,13 @@ class CloudStreamWrapper {
 	private static ?string $cloud_host_cache = null;
 
 	/** @var array Iterator for directory listing */
-	private $dirIterator = null;
+	private $dir_iterator = null;
 
 	/** @var string Current directory path being read */
-	private $dirPath = '';
+	private $dir_path = '';
 
 	/** @var string Prefix for directory listing */
-	private $dirPrefix = '';
+	private $dir_prefix = '';
 
 	/**
 	 * Register the stream wrapper
@@ -109,7 +111,7 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public static function unregister() {
-		if ( in_array( self::PROTOCOL, stream_get_wrappers() ) ) {
+		if ( in_array( self::PROTOCOL, stream_get_wrappers(), true ) ) {
 			$unregistered = stream_wrapper_unregister( self::PROTOCOL );
 
 			if ( $unregistered ) {
@@ -893,7 +895,7 @@ class CloudStreamWrapper {
 		}
 
 		// Create stat (with HEAD request)
-		$stat = $this->createStat( $parsed_path, $flags );
+		$stat = $this->create_stat( $parsed_path, $flags );
 
 		// Cache result (even if false)
 		self::$stat_cache[ $parsed_path ] = $stat;
@@ -903,16 +905,16 @@ class CloudStreamWrapper {
 
 	/**
 	 * Create stat by checking file existence in Azure
-	 * Copied from Infinite Uploads createStat() logic
+	 * Copied from Infinite Uploads create_stat() logic
 	 *
 	 * @param string $path
 	 * @param int    $flags
 	 * @return array|false
 	 */
-	private function createStat( $path, $flags ) {
+	private function create_stat( $path, $flags ) {
 		$cloud_client = self::get_cloud_client();
 		if ( ! $cloud_client ) {
-			return $this->triggerError( 'Cloud client not available', $flags );
+			return $this->trigger_error_internal( 'Cloud client not available', $flags );
 		}
 
 		// Try to check if file exists in Azure (HEAD request)
@@ -920,17 +922,17 @@ class CloudStreamWrapper {
 		try {
 			$exists = $cloud_client->file_exists( $path );
 		} catch ( \Exception $e ) {
-			Logger::error( '[Dilux CloudStreamWrapper] createStat exception: ' . $path . ' - ' . $e->getMessage() );
-			return $this->triggerError( 'Cloud error: ' . $e->getMessage(), $flags );
+			Logger::error( '[Dilux CloudStreamWrapper] create_stat exception: ' . $path . ' - ' . $e->getMessage() );
+			return $this->trigger_error_internal( 'Cloud error: ' . $e->getMessage(), $flags );
 		}
 
 		if ( ! $exists ) {
 			// File doesn't exist - trigger error (returns false)
-			return $this->triggerError( 'File or directory not found: ' . $path, $flags );
+			return $this->trigger_error_internal( 'File or directory not found: ' . $path, $flags );
 		}
 
 		// File exists - return stat array
-		return $this->formatUrlStat( array() );
+		return $this->format_url_stat( array() );
 	}
 
 	/**
@@ -940,11 +942,11 @@ class CloudStreamWrapper {
 	 * @param int    $flags
 	 * @return bool|array
 	 */
-	private function triggerError( $error, $flags = null ) {
+	private function trigger_error_internal( $error, $flags = null ) {
 		// This is triggered with things like file_exists()
 		if ( $flags & STREAM_URL_STAT_QUIET ) {
 			return $flags & STREAM_URL_STAT_LINK
-				? $this->formatUrlStat( false )
+				? $this->format_url_stat( false )
 				: false;
 		}
 
@@ -964,7 +966,7 @@ class CloudStreamWrapper {
 	 * @param mixed $result
 	 * @return array
 	 */
-	private function formatUrlStat( $result = null ) {
+	private function format_url_stat( $result = null ) {
 		$stat = array(
 			0         => 0,
 			'dev'     => 0,

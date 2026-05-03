@@ -40,6 +40,8 @@ class SyncFilter {
 	 * @param array  $excludedPaths Array of paths/patterns to exclude
 	 * @param bool   $includeHiddenFiles Whether to include files starting with '.'
 	 * @param bool   $includeSystemFiles Whether to include system files (.htaccess, index.php, etc.)
+	 *
+	 * @throws \InvalidArgumentException When maxFileSize is negative.
 	 */
 	public function __construct(
 		string $allowedFileTypes = '*',

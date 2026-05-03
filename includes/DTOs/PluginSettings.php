@@ -29,7 +29,7 @@ class PluginSettings {
 	private bool $autoActivateOffloading;
 	/** @var bool */
 	private bool $forceHttpsOnCloud;
-	// NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
+	/** @var int Timeout in seconds. NOTE: use_https removed — HTTPS is always enforced (Azure requirement). */
 	private int $timeout;
 	/** @var int */
 	private int $maxFileSize;
@@ -46,6 +46,8 @@ class PluginSettings {
 	 * @param int    $timeout
 	 * @param int    $maxFileSize
 	 * @param string $allowedFileTypes
+	 *
+	 * @throws \InvalidArgumentException When timeout or maxFileSize are negative.
 	 */
 	public function __construct(
 		bool $debugEnabled = false,

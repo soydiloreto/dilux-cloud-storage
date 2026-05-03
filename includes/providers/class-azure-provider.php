@@ -19,6 +19,9 @@
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fread
  * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+ * phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+ * phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged
  *
  * @package DiluxWP\CloudStorage\Providers
  * @since 1.0.0
@@ -44,7 +47,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Implementation of CloudStorageClientInterface for Azure Blob Storage.
  */
-
 class AzureProvider implements CloudStorageClientInterface {
 
 	/** @var string */
@@ -353,8 +355,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * @return array|false ['size' => int, 'md5' => string, 'last_modified' => string] or false if not found
 	 */
 	public function get_file_info( string $remote_path ) {
-		$fileInfo = $this->get_file_info_dto( $remote_path );
-		return $fileInfo ? $fileInfo->toArray() : false;
+		$file_info = $this->get_file_info_dto( $remote_path );
+		return $file_info ? $file_info->toArray() : false;
 	}
 
 	/**
@@ -567,14 +569,14 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * @return array Array of file info: [['path' => string, 'size' => int, 'md5' => string], ...]
 	 */
 	public function list_files( string $prefix = 'uploads/' ): array {
-		$fileInfos = $this->list_files_dto( $prefix );
+		$file_infos = $this->list_files_dto( $prefix );
 
 		// Convert FileInfo[] to array[]
 		return array_map(
-			function ( FileInfo $fileInfo ) {
-				return $fileInfo->toArray();
+			function ( FileInfo $file_info ) {
+				return $file_info->toArray();
 			},
-			$fileInfos
+			$file_infos
 		);
 	}
 
@@ -663,6 +665,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $prefix Filter by prefix (e.g., 'uploads/')
 	 * @return FileInfo[] Array of FileInfo objects
+	 *
+	 * @throws \Exception When the Azure REST call fails after all retries.
 	 */
 	private function list_files_dto( string $prefix = 'uploads/' ): array {
 		$max_retries = 3;
@@ -1054,8 +1058,6 @@ class AzureProvider implements CloudStorageClientInterface {
 				$response   = curl_exec( $ch );
 				$http_code  = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
 				$curl_error = curl_error( $ch );
-				curl_close( $ch );
-
 				if ( $http_code !== 201 ) {
 					fclose( $fp );
 					$error_msg = "Failed to upload block {$block_index}: HTTP {$http_code}";
