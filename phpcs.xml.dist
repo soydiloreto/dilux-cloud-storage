@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<ruleset name="Dilux Cloud Storage">
+    <description>
+        WordPress Coding Standards configuration for the Dilux Cloud Storage plugin.
+        Strict mode — runs the full WordPress ruleset (Core + Docs + Extra) plus
+        PHP 7.4+ compatibility checks. No baseline.
+    </description>
+
+    <!-- Files / paths to scan -->
+    <file>dilux-cloud-storage.php</file>
+    <file>includes/</file>
+    <file>templates/</file>
+
+    <!-- Files / paths to exclude (mirrors .distignore where applicable) -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+    <exclude-pattern>*/.wordpress-org/*</exclude-pattern>
+    <exclude-pattern>*/assets/*</exclude-pattern>
+    <exclude-pattern>*.min.js</exclude-pattern>
+    <exclude-pattern>*.min.css</exclude-pattern>
+
+    <!-- CLI behaviour -->
+    <arg value="sp"/>
+    <arg name="colors"/>
+    <arg name="parallel" value="8"/>
+    <arg name="extensions" value="php"/>
+    <arg name="cache" value=".phpcs-cache/cache"/>
+
+    <!-- WordPress Coding Standards: Core, Extra, Docs -->
+    <rule ref="WordPress"/>
+
+    <!-- Plugin metadata for naming-convention checks -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="dilux_cs"/>
+                <element value="DILUX_CS"/>
+                <element value="Dilux"/>
+                <element value="DiluxWP"/>
+            </properties>
+        </properties>
+    </rule>
+
+    <!-- Text domain check -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="dilux-cloud-storage"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- Plugin minimum WordPress version -->
+    <config name="minimum_supported_wp_version" value="5.0"/>
+
+    <!-- PHP compatibility: must run cleanly on PHP 7.4 and up -->
+    <config name="testVersion" value="7.4-"/>
+    <rule ref="PHPCompatibilityWP"/>
+</ruleset>
