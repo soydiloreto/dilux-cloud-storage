@@ -61,6 +61,9 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	 * @return true|\WP_Error True if loaded; \WP_Error on failure.
 	 */
 	public function load() {
+		// PHPStan stubs treat \WP_Image_Editor_Imagick::$image as `\Imagick`, but at
+		// runtime it is null until loaded — the instanceof guard is intentional.
+		// @phpstan-ignore-next-line deadCode.unreachable
 		if ( $this->image instanceof \Imagick ) {
 			return true;
 		}

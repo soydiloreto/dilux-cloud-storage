@@ -1475,7 +1475,7 @@ class Admin {
 			$sync_manager = new \DiluxWP\CloudStorage\SyncManager();
 			$result       = $sync_manager->start_sync();
 
-			if ( $result ) {
+			if ( ! empty( $result['success'] ) ) {
 				// Update state to syncing
 				ConfigManager::set_state( 'syncing' );
 
@@ -1486,7 +1486,8 @@ class Admin {
 					)
 				);
 			} else {
-				wp_send_json_error( esc_html__( 'Failed to start sync', 'dilux-cloud-storage' ) );
+				$msg = isset( $result['message'] ) ? (string) $result['message'] : __( 'Failed to start sync', 'dilux-cloud-storage' );
+				wp_send_json_error( esc_html( $msg ) );
 			}
 		} catch ( \Exception $e ) {
 			/* translators: %s: error message */
@@ -1558,6 +1559,7 @@ class Admin {
 
 				// Delete the file. wp_delete_file() returns void, so we re-check existence.
 				wp_delete_file( $file_path );
+				clearstatcache( true, $file_path );
 				if ( ! file_exists( $file_path ) ) {
 					++$deleted_count;
 					$total_size_freed += $file_size;

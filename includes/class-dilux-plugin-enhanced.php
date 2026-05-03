@@ -947,7 +947,6 @@ class Plugin {
 					'configured'
 				)
 			);
-			return;
 		}
 
 		// Set state to SYNCED first (required by CloudStreamWrapper::activate_offloading)
@@ -993,7 +992,6 @@ class Plugin {
 					'offloading_active'
 				)
 			);
-			return;
 		}
 
 		// Deactivate stream wrapper
@@ -1203,6 +1201,7 @@ class Plugin {
 				if ( file_exists( $file_path ) ) {
 					// wp_delete_file() returns void; we re-check existence to detect success.
 					wp_delete_file( $file_path );
+					clearstatcache( true, $file_path );
 					if ( ! file_exists( $file_path ) ) {
 						++$deleted_total;
 					} else {
