@@ -1,0 +1,99 @@
+<?php
+namespace Tests\Integration;
+
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Base class for integration tests that require a loaded WordPress.
+ *
+ * Resets the plugin's custom DB table and known options between tests
+ * so each test runs in isolation. Provides small helpers for inserting
+ * test rows quickly.
+ */
+class IntegrationTestCase extends TestCase {
+
+    /** @var string Custom files table name (resolved once per class). */
+    protected static string $table_name = '';
+
+    /**
+     * Plugin options that need to be cleaned between tests. If a new
+     * top-level option is introduced, add it here so tests don't see
+     * leftover state from previous tests.
+     *
+     * @var array<int, string>
+     */
+    protected static array $plugin_options = [
+        'dilux_cs_config',
+        'dilux_cs_plugin_state',
+        'dilux_cs_sync_meta',
+        'dilux_cs_failed_files',
+        'dilux_cs_connection_health',
+    ];
+
+    /**
+     * @beforeClass
+     */
+    public static function setUpTableName(): void {
+        self::$table_name = \DiluxWP\CloudStorage\DiluxDB::get_table_name();
+    }
+
+    protected function setUp(): void {
+        parent::setUp();
+        $this->cleanDatabase();
+        $this->cleanOptions();
+    }
+
+    protected function tearDown(): void {
+        $this->cleanDatabase();
+        $this->cleanOptions();
+        parent::tearDown();
+    }
+
+    /**
+     * Truncate the custom files table.
+     */
+    protected function cleanDatabase(): void {
+        global $wpdb;
+        $table = self::$table_name;
+        if (!empty($table)) {
+            $wpdb->query("TRUNCATE TABLE `{$table}`");
+        }
+    }
+
+    /**
+     * Delete every plugin option from wp_options.
+     */
+    protected function cleanOptions(): void {
+        foreach (self::$plugin_options as $option) {
+            delete_option($option);
+        }
+    }
+
+    /**
+     * Helper: insert a test file into the custom table.
+     *
+     * @param string $path File path relative to /uploads.
+     * @param int    $size File size in bytes.
+     */
+    protected function addTestFile(string $path, int $size = 1024): bool {
+        return \DiluxWP\CloudStorage\DiluxDB::add_file($path, $size);
+    }
+
+    /**
+     * Helper: insert N test files with auto-numbered paths.
+     */
+    protected function addTestFiles(int $count, int $size = 1024): void {
+        for ($i = 1; $i <= $count; $i++) {
+            $this->addTestFile("/2024/01/test-file-{$i}.jpg", $size);
+        }
+    }
+
+    /**
+     * Helper: get the raw row count from the custom table.
+     */
+    protected function getTableRowCount(): int {
+        global $wpdb;
+        $table = self::$table_name;
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM `{$table}`");
+    }
+}
