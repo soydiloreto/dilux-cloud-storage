@@ -53,13 +53,26 @@ jobs:
           # wp.org's review queue.
           categories: plugin_repo,security,performance,accessibility,general
           include-experimental: true
-          # Plugin Check runs against the GitHub repo tree, not against the
-          # zip deployed to wp.org SVN. These codes flag files (.gitignore,
-          # .github/) that are excluded from the deploy via .distignore —
-          # they legitimately exist in the GitHub repo for development
-          # purposes and are NOT shipped to end users. Other security /
-          # performance / accessibility / general checks remain active.
-          ignore-codes: hidden_files,github_directory
+          # Plugin Check scans the GitHub repo tree, not the zip that gets
+          # deployed to wp.org SVN. The directories and files below all live
+          # in the repo for development and CI purposes, but every one of
+          # them is excluded from the wp.org deploy via .distignore. So
+          # checks that fire on them (test files looking like "applications",
+          # stub files lacking direct-access protection, dev configs with
+          # localhost references, etc.) are false positives for our setup.
+          # Mirror this list with .distignore to keep the two in sync.
+          exclude-directories: tests,vendor,node_modules,docs
+          exclude-files: phpunit.xml.dist,phpunit.xml,phpunit-integration.xml,phpunit-integration.xml.dist,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,psalm.xml,psalm.xml.dist,psalm-baseline.xml
+          # Codes that flag GitHub-only repo metadata. These are not real
+          # plugin issues — they only fire because Plugin Check scans the
+          # repo tree, not the deployed zip.
+          # - hidden_files: .gitignore, .gitattributes
+          # - github_directory: .github/
+          # - unexpected_markdown_file: CONTRIBUTING.md, SECURITY.md,
+          #   CODE_OF_CONDUCT.md (Plugin Check only expects readme.txt and
+          #   maybe README.md — but it doesn't expect the rest of the
+          #   community profile, all of which is excluded from the deploy)
+          ignore-codes: hidden_files,github_directory,unexpected_markdown_file
 
   readme-validation:
     name: Validate readme.txt and version alignment

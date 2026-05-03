@@ -60,7 +60,27 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-  # Composer entry will be added in PR P2.1 (Unit tests foundation), at the
-  # same time as composer.json itself. Configuring it here without a manifest
-  # produces "no-manifest" errors in the Dependabot dashboard on every weekly
-  # check, which is noise for no benefit until composer.json exists.
+  # Composer dev dependencies — phpunit, brain/monkey, mockery (added in
+  # P2.1, expanded in P2.2 / P3.x with phpstan, psalm, wpcs, etc.). All
+  # are dev-only — composer install --no-dev would skip them — but the
+  # plugin runtime never invokes Composer regardless. None of these
+  # dependencies reach wp.org (the entire vendor/ tree is in .distignore).
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Argentina/Buenos_Aires"
+    open-pull-requests-limit: 3
+    groups:
+      composer-dev:
+        dependency-type: "development"
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "composer"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"

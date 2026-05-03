@@ -1,0 +1,36 @@
+{
+    "name": "soydiloreto/dilux-cloud-storage",
+    "description": "Dilux Cloud Storage WordPress plugin — Composer manifest for development tooling (PHPUnit, Brain Monkey, Mockery). Not used at runtime.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://github.com/soydiloreto/dilux-cloud-storage",
+    "support": {
+        "issues": "https://github.com/soydiloreto/dilux-cloud-storage/issues",
+        "source": "https://github.com/soydiloreto/dilux-cloud-storage"
+    },
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "brain/monkey": "^2.6",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {}
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite unit"
+    },
+    "scripts-descriptions": {
+        "test": "Run all PHPUnit suites.",
+        "test:unit": "Run only the unit-test suite (no WordPress runtime required, fast)."
+    }
+}
