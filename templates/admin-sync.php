@@ -359,7 +359,7 @@ $pending_count   = $template_data['pending_count'] ?? 0;
 				</div>
 			</div>
 
-		<?php elseif ( $current_state === 'synced' && $failed_count == 0 ) : ?>
+		<?php elseif ( $current_state === 'synced' && (int) $failed_count === 0 ) : ?>
 			<!-- ACTIONS: SYNCED COMPLETED (NO ERRORS, NO PENDINGS) -->
 			<div style="padding: 20px 0;">
 				<!-- Main action: Enable Offloading (prominent) -->

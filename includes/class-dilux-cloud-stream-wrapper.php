@@ -397,7 +397,8 @@ class CloudStreamWrapper {
 		}
 		$config = ConfigManager::get_config();
 		if ( empty( $config['cloud_provider'] ) ) {
-			return self::$cloud_host_cache = '';
+			self::$cloud_host_cache = '';
+			return self::$cloud_host_cache;
 		}
 		$provider = $config['cloud_provider'];
 		$pc       = $config['provider_config'] ?? array();
@@ -415,7 +416,8 @@ class CloudStreamWrapper {
 			$host = (string) $pc['cdn_host'];
 		}
 
-		return self::$cloud_host_cache = strtolower( $host );
+		self::$cloud_host_cache = strtolower( $host );
+		return self::$cloud_host_cache;
 	}
 
 
@@ -609,7 +611,10 @@ class CloudStreamWrapper {
 			if ( $written !== false ) {
 				Logger::warning( '[Dilux CloudStreamWrapper] FALLBACK: Saved locally due to unhealthy connection (' . $health['consecutive_failures'] . ' failures): ' . $this->path );
 				// Track fallback for admin notification
-				$fallbacks   = get_transient( 'dilux_cs_fallback_uploads' ) ?: array();
+				$fallbacks = get_transient( 'dilux_cs_fallback_uploads' );
+				if ( ! is_array( $fallbacks ) ) {
+					$fallbacks = array();
+				}
 				$fallbacks[] = array(
 					'path' => $this->path,
 					'time' => time(),
@@ -993,11 +998,13 @@ class CloudStreamWrapper {
 			case 'NULL':
 			case 'string':
 				// Directory with 0777 access
-				$stat['mode'] = $stat[2] = 0040777;
+				$stat[2]      = 0040777;
+				$stat['mode'] = 0040777;
 				break;
 			case 'array':
 				// Regular file with 0777 access
-				$stat['mode'] = $stat[2] = 0100777;
+				$stat[2]      = 0100777;
+				$stat['mode'] = 0100777;
 				break;
 		}
 

@@ -68,7 +68,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 		$this->api_base_url = defined( 'DILUX_API_URL' )
 			? DILUX_API_URL
 			: 'https://api.diluxone.com/cloud-storage-wp/v1';
-		$this->wp_domain    = wp_parse_url( site_url(), PHP_URL_HOST ) ?: 'localhost';
+		$parsed_host        = wp_parse_url( site_url(), PHP_URL_HOST );
+		$this->wp_domain    = ( is_string( $parsed_host ) && $parsed_host !== '' ) ? $parsed_host : 'localhost';
 	}
 
 	// ========================================================================

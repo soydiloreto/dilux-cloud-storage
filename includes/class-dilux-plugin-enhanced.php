@@ -183,7 +183,8 @@ class Plugin {
 	 */
 	public function filter_image_editors( array $editors ): array {
 		// Remove default Imagick if present
-		if ( ( $position = array_search( 'WP_Image_Editor_Imagick', $editors ) ) !== false ) {
+		$position = array_search( 'WP_Image_Editor_Imagick', $editors, true );
+		if ( $position !== false ) {
 			unset( $editors[ $position ] );
 		}
 
@@ -245,7 +246,7 @@ class Plugin {
 			wp_send_json_success( $batch_result );
 		} else {
 			// Just return current progress
-			wp_send_json_success( $progress ?: array( 'status' => 'idle' ) );
+			wp_send_json_success( $progress ? $progress : array( 'status' => 'idle' ) );
 		}
 	}
 

@@ -916,7 +916,7 @@ class SyncManager {
 				);
 			} else {
 				// ⭐ FIX: Enhanced error logging with Azure response body
-				$error_details = $error ?: 'HTTP ' . $response_code;
+				$error_details = $error ? $error : 'HTTP ' . $response_code;
 				if ( ! empty( $response_body ) && $response_code >= 400 ) {
 					// Log Azure error response for debugging
 					Logger::info( '[Dilux SyncManager] Azure Response Body for ' . $file_info['path'] . ': ' . substr( $response_body, 0, 500 ) );
@@ -932,7 +932,7 @@ class SyncManager {
 					sprintf(
 						'✗ FAILED: %s - Error: %s [HTTP %d]',
 						$file_info['path'],
-						$error ?: 'Unknown error',
+						$error ? $error : 'Unknown error',
 						$response_code
 					)
 				);
@@ -1064,7 +1064,7 @@ class SyncManager {
 			} else {
 				$results[ $i ] = array(
 					'success' => false,
-					'error'   => $error ?: 'HTTP ' . $response_code,
+					'error'   => $error ? $error : 'HTTP ' . $response_code,
 				);
 			}
 
@@ -1201,7 +1201,7 @@ class SyncManager {
 					'path' => $relative_path,
 					'size' => $cloud_file['size'],
 				);
-			} elseif ( $local_file->synced == 0 && $local_file->size == $cloud_file['size'] ) {
+			} elseif ( (int) $local_file->synced === 0 && (int) $local_file->size === (int) $cloud_file['size'] ) {
 				// File already synced (same size), mark as synced
 				DiluxDB::mark_synced( $relative_path );
 			}

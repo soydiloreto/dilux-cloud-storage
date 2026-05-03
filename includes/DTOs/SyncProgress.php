@@ -71,8 +71,8 @@ class SyncProgress {
 		$this->processedFiles    = $processedFiles;
 		$this->successfulUploads = $successfulUploads;
 		$this->failedUploads     = $failedUploads;
-		$this->startTime         = $startTime ?: time();
-		$this->lastUpdate        = $lastUpdate ?: time();
+		$this->startTime         = $startTime ? $startTime : time();
+		$this->lastUpdate        = $lastUpdate ? $lastUpdate : time();
 		$this->errors            = $errors;
 	}
 
