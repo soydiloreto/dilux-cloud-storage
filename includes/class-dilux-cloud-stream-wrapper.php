@@ -1377,8 +1377,8 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public function dir_opendir( $path, $options ) {
-		$this->dirPath   = $this->parse_path( $path );
-		$this->dirPrefix = rtrim( $this->dirPath, '/' ) . '/';
+		$this->dir_path   = $this->parse_path( $path );
+		$this->dir_prefix = rtrim( $this->dir_path, '/' ) . '/';
 
 		$cloud_client = self::get_cloud_client();
 		if ( ! $cloud_client ) {
@@ -1390,10 +1390,10 @@ class CloudStreamWrapper {
 		// Note: Azure doesn't have native "listBlobs with prefix" in our client
 		// For now, we'll create an empty iterator to prevent errors
 		// This is a simplified version - full implementation would require Azure Blob list API
-		$this->dirIterator = array();
+		$this->dir_iterator = array();
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			Logger::info( '[Dilux CloudStreamWrapper] dir_opendir: ' . $this->dirPath );
+			Logger::info( '[Dilux CloudStreamWrapper] dir_opendir: ' . $this->dir_path );
 		}
 
 		return true;
@@ -1409,20 +1409,20 @@ class CloudStreamWrapper {
 	 */
 	public function dir_readdir() {
 		// Check if iterator is valid
-		if ( ! is_array( $this->dirIterator ) || empty( $this->dirIterator ) ) {
+		if ( ! is_array( $this->dir_iterator ) || empty( $this->dir_iterator ) ) {
 			return false;
 		}
 
 		// Get current item and advance
-		$current = array_shift( $this->dirIterator );
+		$current = array_shift( $this->dir_iterator );
 
 		if ( $current === null ) {
 			return false;
 		}
 
 		// Remove prefix to return relative path (like Infinite Uploads does)
-		if ( $this->dirPrefix && strpos( $current, $this->dirPrefix ) === 0 ) {
-			return substr( $current, strlen( $this->dirPrefix ) );
+		if ( $this->dir_prefix && strpos( $current, $this->dir_prefix ) === 0 ) {
+			return substr( $current, strlen( $this->dir_prefix ) );
 		}
 
 		return $current;
@@ -1437,9 +1437,9 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public function dir_closedir() {
-		$this->dirIterator = null;
-		$this->dirPath     = '';
-		$this->dirPrefix   = '';
+		$this->dir_iterator = null;
+		$this->dir_path     = '';
+		$this->dir_prefix   = '';
 
 		// Force garbage collection like Infinite Uploads does
 		gc_collect_cycles();
@@ -1457,7 +1457,7 @@ class CloudStreamWrapper {
 	 */
 	public function dir_rewinddir() {
 		// Reset by re-opening the directory
-		$this->dirIterator = null;
-		return $this->dir_opendir( $this->dirPath, null );
+		$this->dir_iterator = null;
+		return $this->dir_opendir( $this->dir_path, null );
 	}
 }
