@@ -22,9 +22,9 @@
 
     <!-- CLI behaviour. Cache is intentionally not configured here — PHPCS
          requires the parent directory to exist before it can write the
-         cache file, which adds friction on fresh clones / cold CI runs.
-         Local devs can pass --cache=.phpcs-cache/cache manually after
-         creating the directory. -->
+         cache file, which adds friction on fresh clones and cold CI
+         runs. Local devs can opt in by passing the cache flag on the
+         command line after creating the directory manually. -->
     <arg value="sp"/>
     <arg name="colors"/>
     <arg name="parallel" value="8"/>
