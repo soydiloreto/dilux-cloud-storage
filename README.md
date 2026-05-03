@@ -22,6 +22,52 @@ User-facing documentation (features, installation, configuration, FAQ) lives in 
 
 This README and the rest of this repository are aimed at developers who want to **contribute, fork, or run the plugin from source**.
 
+## Development setup
+
+The repository ships with a [`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) configuration so any contributor can spin up a fresh WordPress install with the plugin pre-mounted in two commands.
+
+### Prerequisites
+
+- **Docker** (Docker Desktop on macOS/Windows, or Docker Engine on Linux) — running.
+- **Node.js 18+** and **npm**.
+
+### Start the environment
+
+```bash
+git clone https://github.com/soydiloreto/dilux-cloud-storage.git
+cd dilux-cloud-storage
+npm install
+npm run env:start
+```
+
+When it finishes, open **http://localhost:8888**. Log in with `admin` / `password`. The plugin is already mounted in `wp-content/plugins/dilux-cloud-storage/` — just activate it from the **Plugins** screen.
+
+### Day-to-day commands
+
+| Command | What it does |
+|---------|--------------|
+| `npm run env:start` | Start the local WordPress + MySQL containers. |
+| `npm run env:stop` | Stop the containers (preserves the database). |
+| `npm run env:destroy` | Tear everything down and wipe the local database. Use this if your dev install gets into a bad state. |
+| `npm run env:reset` | `destroy` followed by `start` — fresh install. |
+| `npm run env:cli -- <command>` | Run a `wp-cli` command inside the container. Example: `npm run env:cli -- plugin list`. |
+| `npm run env:logs` | Tail the WordPress container logs (useful when `WP_DEBUG_LOG` writes errors). |
+
+### Configuration
+
+The default environment is configured in [`.wp-env.json`](.wp-env.json):
+
+- **WordPress core**: latest stable.
+- **PHP version**: 8.2.
+- **Plugin**: this repository, auto-mounted.
+- **Debug mode**: `WP_DEBUG`, `WP_DEBUG_LOG`, and `SCRIPT_DEBUG` enabled. `WP_DEBUG_DISPLAY` is off so errors don't render in pages — they go to `wp-content/debug.log` instead.
+
+To override any of these on your local machine without committing the changes, create a `.wp-env.override.json` file (it's already in `.gitignore`). See the [`@wordpress/env` documentation](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) for the full schema.
+
+### Manual install (alternative)
+
+If you prefer your own WordPress setup, you can clone this repo directly into `wp-content/plugins/dilux-cloud-storage/` of your existing WordPress install. The plugin has no build step — it runs straight from source.
+
 ## Architecture overview
 
 | Path | What it contains |
