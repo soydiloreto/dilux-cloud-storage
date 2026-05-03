@@ -1,8 +1,8 @@
 <?php
 namespace DiluxWP\CloudStorage\Enums;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -15,55 +15,55 @@ if (!defined('ABSPATH')) {
  */
 class SyncStatus {
 
-    const IDLE = 'idle';
-    const STARTED = 'started';
-    const PAUSED = 'paused';
-    const COMPLETED = 'completed';
-    const FAILED = 'failed';
-    const CANCELLED = 'cancelled';
+	const IDLE      = 'idle';
+	const STARTED   = 'started';
+	const PAUSED    = 'paused';
+	const COMPLETED = 'completed';
+	const FAILED    = 'failed';
+	const CANCELLED = 'cancelled';
 
-    /**
-     * Get all valid statuses
-     *
-     * @return array
-     */
-    public static function getAll(): array {
-        return [
-            self::IDLE,
-            self::STARTED,
-            self::PAUSED,
-            self::COMPLETED,
-            self::FAILED,
-            self::CANCELLED
-        ];
-    }
+	/**
+	 * Get all valid statuses
+	 *
+	 * @return array
+	 */
+	public static function getAll(): array {
+		return array(
+			self::IDLE,
+			self::STARTED,
+			self::PAUSED,
+			self::COMPLETED,
+			self::FAILED,
+			self::CANCELLED,
+		);
+	}
 
-    /**
-     * Check if status is valid
-     *
-     * @param string $status
-     * @return bool
-     */
-    public static function isValid(string $status): bool {
-        return in_array($status, self::getAll(), true);
-    }
+	/**
+	 * Check if status is valid
+	 *
+	 * @param string $status
+	 * @return bool
+	 */
+	public static function isValid( string $status ): bool {
+		return in_array( $status, self::getAll(), true );
+	}
 
-    /**
-     * Check if sync is in progress
-     *
-     * @param string $status
-     * @return bool
-     */
-    public static function isInProgress(string $status): bool {
-        return in_array($status, [self::STARTED, self::PAUSED], true);
-    }
+	/**
+	 * Check if sync is in progress
+	 *
+	 * @param string $status
+	 * @return bool
+	 */
+	public static function isInProgress( string $status ): bool {
+		return in_array( $status, array( self::STARTED, self::PAUSED ), true );
+	}
 
-    /**
-     * Check if sync is finished (completed, failed, or cancelled)
-     *
-     * @return bool
-     */
-    public static function isFinished(string $status): bool {
-        return in_array($status, [self::COMPLETED, self::FAILED, self::CANCELLED], true);
-    }
+	/**
+	 * Check if sync is finished (completed, failed, or cancelled)
+	 *
+	 * @return bool
+	 */
+	public static function isFinished( string $status ): bool {
+		return in_array( $status, array( self::COMPLETED, self::FAILED, self::CANCELLED ), true );
+	}
 }

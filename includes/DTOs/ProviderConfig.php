@@ -1,8 +1,8 @@
 <?php
 namespace DiluxWP\CloudStorage\DTOs;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -15,186 +15,186 @@ if (!defined('ABSPATH')) {
  */
 class ProviderConfig {
 
-    private string $cloudProvider;
-    private array $providerConfig;
+	private string $cloudProvider;
+	private array $providerConfig;
 
-    /**
-     * Constructor
-     *
-     * @param string $cloudProvider Provider name (azure, aws, gcp)
-     * @param array $providerConfig Provider-specific configuration
-     */
-    public function __construct(
-        string $cloudProvider = '',
-        array $providerConfig = []
-    ) {
-        $this->cloudProvider = $cloudProvider;
-        $this->providerConfig = $providerConfig;
-    }
+	/**
+	 * Constructor
+	 *
+	 * @param string $cloudProvider Provider name (azure, aws, gcp)
+	 * @param array  $providerConfig Provider-specific configuration
+	 */
+	public function __construct(
+		string $cloudProvider = '',
+		array $providerConfig = array()
+	) {
+		$this->cloudProvider  = $cloudProvider;
+		$this->providerConfig = $providerConfig;
+	}
 
-    /**
-     * Create from array configuration
-     *
-     * @param array $config
-     * @return self
-     */
-    public static function fromArray(array $config): self {
-        return new self(
-            $config['cloud_provider'] ?? '',
-            $config['provider_config'] ?? []
-        );
-    }
+	/**
+	 * Create from array configuration
+	 *
+	 * @param array $config
+	 * @return self
+	 */
+	public static function fromArray( array $config ): self {
+		return new self(
+			$config['cloud_provider'] ?? '',
+			$config['provider_config'] ?? array()
+		);
+	}
 
-    /**
-     * Create from POST data
-     *
-     * @param array $post POST data from form
-     * @return self
-     * @throws \InvalidArgumentException
-     */
-    public static function fromPost(array $post): self {
-        $cloud_provider = sanitize_text_field($post['cloud_provider'] ?? '');
+	/**
+	 * Create from POST data
+	 *
+	 * @param array $post POST data from form
+	 * @return self
+	 * @throws \InvalidArgumentException
+	 */
+	public static function fromPost( array $post ): self {
+		$cloud_provider = sanitize_text_field( $post['cloud_provider'] ?? '' );
 
-        if (empty($cloud_provider)) {
-            throw new \InvalidArgumentException('Cloud provider is required');
-        }
+		if ( empty( $cloud_provider ) ) {
+			throw new \InvalidArgumentException( 'Cloud provider is required' );
+		}
 
-        // Build provider-specific configuration
-        $provider_config = [];
+		// Build provider-specific configuration
+		$provider_config = array();
 
-        switch ($cloud_provider) {
-            case 'azure':
-                $provider_config = [
-                    'storage_account' => sanitize_text_field($post['account_name'] ?? ''),
-                    'access_key' => sanitize_text_field($post['account_key'] ?? ''),
-                    'container_name' => sanitize_text_field($post['container_name'] ?? ''),
-                    'custom_domain' => sanitize_text_field($post['custom_domain'] ?? ''),
-                    // NOTE: use_https removed - HTTPS is always enforced in provider
-                ];
+		switch ( $cloud_provider ) {
+			case 'azure':
+				$provider_config = array(
+					'storage_account' => sanitize_text_field( $post['account_name'] ?? '' ),
+					'access_key'      => sanitize_text_field( $post['account_key'] ?? '' ),
+					'container_name'  => sanitize_text_field( $post['container_name'] ?? '' ),
+					'custom_domain'   => sanitize_text_field( $post['custom_domain'] ?? '' ),
+					// NOTE: use_https removed - HTTPS is always enforced in provider
+				);
 
-                // Validate required fields
-                if (empty($provider_config['storage_account'])) {
-                    throw new \InvalidArgumentException('Storage Account Name is required');
-                }
-                if (empty($provider_config['access_key'])) {
-                    throw new \InvalidArgumentException('Access Key is required');
-                }
-                if (empty($provider_config['container_name'])) {
-                    throw new \InvalidArgumentException('Container Name is required');
-                }
+				// Validate required fields
+				if ( empty( $provider_config['storage_account'] ) ) {
+					throw new \InvalidArgumentException( 'Storage Account Name is required' );
+				}
+				if ( empty( $provider_config['access_key'] ) ) {
+					throw new \InvalidArgumentException( 'Access Key is required' );
+				}
+				if ( empty( $provider_config['container_name'] ) ) {
+					throw new \InvalidArgumentException( 'Container Name is required' );
+				}
 
-                // Validate formats
-                if (!preg_match('/^[a-z0-9]{3,24}$/', $provider_config['storage_account'])) {
-                    throw new \InvalidArgumentException('Storage Account Name must be 3-24 lowercase letters and numbers only');
-                }
-                if (!preg_match('/^[a-z0-9](?:[a-z0-9]|[-](?![.])){1,61}[a-z0-9]$/', $provider_config['container_name'])) {
-                    throw new \InvalidArgumentException('Container Name must be lowercase letters, numbers, and hyphens only (3-63 characters)');
-                }
-                break;
+				// Validate formats
+				if ( ! preg_match( '/^[a-z0-9]{3,24}$/', $provider_config['storage_account'] ) ) {
+					throw new \InvalidArgumentException( 'Storage Account Name must be 3-24 lowercase letters and numbers only' );
+				}
+				if ( ! preg_match( '/^[a-z0-9](?:[a-z0-9]|[-](?![.])){1,61}[a-z0-9]$/', $provider_config['container_name'] ) ) {
+					throw new \InvalidArgumentException( 'Container Name must be lowercase letters, numbers, and hyphens only (3-63 characters)' );
+				}
+				break;
 
-            case 'diluxone':
-                $provider_config = [
-                    'api_key' => sanitize_text_field($post['api_key'] ?? ''),
-                    'cdn_base_url' => '',
-                ];
-                if (empty($provider_config['api_key'])) {
-                    throw new \InvalidArgumentException('API Key is required');
-                }
-                break;
+			case 'diluxone':
+				$provider_config = array(
+					'api_key'      => sanitize_text_field( $post['api_key'] ?? '' ),
+					'cdn_base_url' => '',
+				);
+				if ( empty( $provider_config['api_key'] ) ) {
+					throw new \InvalidArgumentException( 'API Key is required' );
+				}
+				break;
 
-            // Future providers: aws, gcp
-            default:
-                throw new \InvalidArgumentException('Unsupported cloud provider: ' . esc_html($cloud_provider));
-        }
+			// Future providers: aws, gcp
+			default:
+				throw new \InvalidArgumentException( 'Unsupported cloud provider: ' . esc_html( $cloud_provider ) );
+		}
 
-        return new self($cloud_provider, $provider_config);
-    }
+		return new self( $cloud_provider, $provider_config );
+	}
 
-    /**
-     * Get cloud provider name
-     *
-     * @return string
-     */
-    public function getCloudProvider(): string {
-        return $this->cloudProvider;
-    }
+	/**
+	 * Get cloud provider name
+	 *
+	 * @return string
+	 */
+	public function getCloudProvider(): string {
+		return $this->cloudProvider;
+	}
 
-    /**
-     * Get provider-specific configuration
-     *
-     * @return array
-     */
-    public function getProviderConfig(): array {
-        // NOTE: use_https enforcement removed - HTTPS is now hardcoded in provider
-        return $this->providerConfig;
-    }
+	/**
+	 * Get provider-specific configuration
+	 *
+	 * @return array
+	 */
+	public function getProviderConfig(): array {
+		// NOTE: use_https enforcement removed - HTTPS is now hardcoded in provider
+		return $this->providerConfig;
+	}
 
-    /**
-     * Check if provider is configured
-     *
-     * @return bool
-     */
-    public function isConfigured(): bool {
-        return !empty($this->cloudProvider) && !empty($this->providerConfig);
-    }
+	/**
+	 * Check if provider is configured
+	 *
+	 * @return bool
+	 */
+	public function isConfigured(): bool {
+		return ! empty( $this->cloudProvider ) && ! empty( $this->providerConfig );
+	}
 
-    /**
-     * Get storage account name (Azure specific)
-     *
-     * @return string
-     */
-    public function getStorageAccount(): string {
-        return $this->providerConfig['storage_account'] ?? '';
-    }
+	/**
+	 * Get storage account name (Azure specific)
+	 *
+	 * @return string
+	 */
+	public function getStorageAccount(): string {
+		return $this->providerConfig['storage_account'] ?? '';
+	}
 
-    /**
-     * Get container name (Azure specific)
-     *
-     * @return string
-     */
-    public function getContainerName(): string {
-        return $this->providerConfig['container_name'] ?? '';
-    }
+	/**
+	 * Get container name (Azure specific)
+	 *
+	 * @return string
+	 */
+	public function getContainerName(): string {
+		return $this->providerConfig['container_name'] ?? '';
+	}
 
-    /**
-     * Get custom domain
-     *
-     * @return string
-     */
-    public function getCustomDomain(): string {
-        return $this->providerConfig['custom_domain'] ?? '';
-    }
+	/**
+	 * Get custom domain
+	 *
+	 * @return string
+	 */
+	public function getCustomDomain(): string {
+		return $this->providerConfig['custom_domain'] ?? '';
+	}
 
-    /**
-     * Convert to array format
-     *
-     * @return array
-     */
-    public function toArray(): array {
-        return [
-            'cloud_provider' => $this->cloudProvider,
-            'provider_config' => $this->providerConfig
-        ];
-    }
+	/**
+	 * Convert to array format
+	 *
+	 * @return array
+	 */
+	public function toArray(): array {
+		return array(
+			'cloud_provider'  => $this->cloudProvider,
+			'provider_config' => $this->providerConfig,
+		);
+	}
 
-    /**
-     * Merge with another provider config (update fields)
-     *
-     * @param array $updates Array of fields to update
-     * @return self New instance with updated fields
-     */
-    public function merge(array $updates): self {
-        $current = $this->toArray();
-        $merged = array_merge($current, $updates);
+	/**
+	 * Merge with another provider config (update fields)
+	 *
+	 * @param array $updates Array of fields to update
+	 * @return self New instance with updated fields
+	 */
+	public function merge( array $updates ): self {
+		$current = $this->toArray();
+		$merged  = array_merge( $current, $updates );
 
-        // Handle nested provider_config merge
-        if (isset($updates['provider_config'])) {
-            $merged['provider_config'] = array_merge(
-                $current['provider_config'] ?? [],
-                $updates['provider_config']
-            );
-        }
+		// Handle nested provider_config merge
+		if ( isset( $updates['provider_config'] ) ) {
+			$merged['provider_config'] = array_merge(
+				$current['provider_config'] ?? array(),
+				$updates['provider_config']
+			);
+		}
 
-        return self::fromArray($merged);
-    }
+		return self::fromArray( $merged );
+	}
 }

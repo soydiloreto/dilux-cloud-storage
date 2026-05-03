@@ -13,8 +13,8 @@
 
 namespace DiluxWP\CloudStorage;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -36,169 +36,169 @@ if (!defined('ABSPATH')) {
  */
 class Logger {
 
-    /** @var array<string, int> Cache of message hash → timestamp last logged, for spam prevention. */
-    private static array $log_cache = [];
+	/** @var array<string, int> Cache of message hash → timestamp last logged, for spam prevention. */
+	private static array $log_cache = array();
 
-    /** @var int Dedupe window in seconds. */
-    private static int $cache_duration = 300;
+	/** @var int Dedupe window in seconds. */
+	private static int $cache_duration = 300;
 
-    /** @var bool Whether verbose (info/debug) logging is enabled. */
-    private static bool $verbose_logging = false;
+	/** @var bool Whether verbose (info/debug) logging is enabled. */
+	private static bool $verbose_logging = false;
 
-    /** @var bool Whether init() has run. */
-    private static bool $initialized = false;
+	/** @var bool Whether init() has run. */
+	private static bool $initialized = false;
 
-    /**
-     * Initialize logger — reads verbose-logging state from:
-     *
-     *   1. DILUX_VERBOSE_LOGGING constant (wins if defined and true).
-     *   2. dilux_cs_config['enable_debug_logging'] (Settings tab toggle).
-     *   3. WP_DEBUG (as a fallback developer hint).
-     *
-     * Idempotent; subsequent calls are no-ops.
-     *
-     * @return void
-     */
-    public static function init(): void {
-        if (self::$initialized) {
-            return;
-        }
+	/**
+	 * Initialize logger — reads verbose-logging state from:
+	 *
+	 *   1. DILUX_VERBOSE_LOGGING constant (wins if defined and true).
+	 *   2. dilux_cs_config['enable_debug_logging'] (Settings tab toggle).
+	 *   3. WP_DEBUG (as a fallback developer hint).
+	 *
+	 * Idempotent; subsequent calls are no-ops.
+	 *
+	 * @return void
+	 */
+	public static function init(): void {
+		if ( self::$initialized ) {
+			return;
+		}
 
-        if (defined('DILUX_VERBOSE_LOGGING') && DILUX_VERBOSE_LOGGING) {
-            self::$verbose_logging = true;
-        } else {
-            $config = get_option('dilux_cs_config', []);
-            if (is_array($config) && !empty($config['enable_debug_logging'])) {
-                self::$verbose_logging = true;
-            } elseif (defined('WP_DEBUG') && WP_DEBUG) {
-                self::$verbose_logging = false;
-            }
-        }
+		if ( defined( 'DILUX_VERBOSE_LOGGING' ) && DILUX_VERBOSE_LOGGING ) {
+			self::$verbose_logging = true;
+		} else {
+			$config = get_option( 'dilux_cs_config', array() );
+			if ( is_array( $config ) && ! empty( $config['enable_debug_logging'] ) ) {
+				self::$verbose_logging = true;
+			} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				self::$verbose_logging = false;
+			}
+		}
 
-        self::$initialized = true;
-    }
+		self::$initialized = true;
+	}
 
-    /**
-     * Re-read the verbose-logging flag from persisted config.
-     *
-     * Call this after saving the Settings tab so the toggle takes effect immediately
-     * without requiring a page reload.
-     *
-     * @return void
-     */
-    public static function refresh(): void {
-        self::$initialized = false;
-        self::init();
-    }
+	/**
+	 * Re-read the verbose-logging flag from persisted config.
+	 *
+	 * Call this after saving the Settings tab so the toggle takes effect immediately
+	 * without requiring a page reload.
+	 *
+	 * @return void
+	 */
+	public static function refresh(): void {
+		self::$initialized = false;
+		self::init();
+	}
 
-    /**
-     * Write a log line.
-     *
-     * @param string $message Log message.
-     * @param string $level   'error' | 'warning' | 'info' | 'debug'. Defaults to 'info'.
-     * @param bool   $force   If true, always log regardless of level and verbose flag.
-     * @return void
-     */
-    public static function log(string $message, string $level = 'info', bool $force = false): void {
-        if (!self::$initialized) {
-            self::init();
-        }
+	/**
+	 * Write a log line.
+	 *
+	 * @param string $message Log message.
+	 * @param string $level   'error' | 'warning' | 'info' | 'debug'. Defaults to 'info'.
+	 * @param bool   $force   If true, always log regardless of level and verbose flag.
+	 * @return void
+	 */
+	public static function log( string $message, string $level = 'info', bool $force = false ): void {
+		if ( ! self::$initialized ) {
+			self::init();
+		}
 
-        $should_log = $force
-            || $level === 'error'
-            || $level === 'warning'
-            || self::$verbose_logging;
+		$should_log = $force
+			|| $level === 'error'
+			|| $level === 'warning'
+			|| self::$verbose_logging;
 
-        if (!$should_log) {
-            return;
-        }
+		if ( ! $should_log ) {
+			return;
+		}
 
-        // Dedupe: skip if we've logged the same message within the window.
-        $cache_key = md5($level . '|' . $message);
-        $now = time();
-        if (isset(self::$log_cache[$cache_key]) && ($now - self::$log_cache[$cache_key]) < self::$cache_duration) {
-            return;
-        }
+		// Dedupe: skip if we've logged the same message within the window.
+		$cache_key = md5( $level . '|' . $message );
+		$now       = time();
+		if ( isset( self::$log_cache[ $cache_key ] ) && ( $now - self::$log_cache[ $cache_key ] ) < self::$cache_duration ) {
+			return;
+		}
 
-        error_log($message);
-        self::$log_cache[$cache_key] = $now;
-        self::clean_cache($now);
-    }
+		error_log( $message );
+		self::$log_cache[ $cache_key ] = $now;
+		self::clean_cache( $now );
+	}
 
-    /**
-     * Convenience shortcut: always-on error log.
-     *
-     * @param string $message
-     * @return void
-     */
-    public static function error(string $message): void {
-        self::log($message, 'error');
-    }
+	/**
+	 * Convenience shortcut: always-on error log.
+	 *
+	 * @param string $message
+	 * @return void
+	 */
+	public static function error( string $message ): void {
+		self::log( $message, 'error' );
+	}
 
-    /**
-     * Convenience shortcut: always-on warning log.
-     *
-     * @param string $message
-     * @return void
-     */
-    public static function warning(string $message): void {
-        self::log($message, 'warning');
-    }
+	/**
+	 * Convenience shortcut: always-on warning log.
+	 *
+	 * @param string $message
+	 * @return void
+	 */
+	public static function warning( string $message ): void {
+		self::log( $message, 'warning' );
+	}
 
-    /**
-     * Convenience shortcut: gated info log.
-     *
-     * @param string $message
-     * @return void
-     */
-    public static function info(string $message): void {
-        self::log($message, 'info');
-    }
+	/**
+	 * Convenience shortcut: gated info log.
+	 *
+	 * @param string $message
+	 * @return void
+	 */
+	public static function info( string $message ): void {
+		self::log( $message, 'info' );
+	}
 
-    /**
-     * Convenience shortcut: gated debug log.
-     *
-     * @param string $message
-     * @return void
-     */
-    public static function debug(string $message): void {
-        self::log($message, 'debug');
-    }
+	/**
+	 * Convenience shortcut: gated debug log.
+	 *
+	 * @param string $message
+	 * @return void
+	 */
+	public static function debug( string $message ): void {
+		self::log( $message, 'debug' );
+	}
 
-    /**
-     * Manually set verbose-logging state (useful for tests).
-     *
-     * @param bool $enabled
-     * @return void
-     */
-    public static function set_verbose_logging(bool $enabled): void {
-        self::$verbose_logging = $enabled;
-        self::$initialized = true;
-    }
+	/**
+	 * Manually set verbose-logging state (useful for tests).
+	 *
+	 * @param bool $enabled
+	 * @return void
+	 */
+	public static function set_verbose_logging( bool $enabled ): void {
+		self::$verbose_logging = $enabled;
+		self::$initialized     = true;
+	}
 
-    /**
-     * Whether verbose (info/debug) logging is currently enabled.
-     *
-     * @return bool
-     */
-    public static function is_verbose_logging(): bool {
-        if (!self::$initialized) {
-            self::init();
-        }
-        return self::$verbose_logging;
-    }
+	/**
+	 * Whether verbose (info/debug) logging is currently enabled.
+	 *
+	 * @return bool
+	 */
+	public static function is_verbose_logging(): bool {
+		if ( ! self::$initialized ) {
+			self::init();
+		}
+		return self::$verbose_logging;
+	}
 
-    /**
-     * Remove stale dedupe-cache entries.
-     *
-     * @param int $now Current timestamp.
-     * @return void
-     */
-    private static function clean_cache(int $now): void {
-        foreach (self::$log_cache as $key => $timestamp) {
-            if (($now - $timestamp) > self::$cache_duration) {
-                unset(self::$log_cache[$key]);
-            }
-        }
-    }
+	/**
+	 * Remove stale dedupe-cache entries.
+	 *
+	 * @param int $now Current timestamp.
+	 * @return void
+	 */
+	private static function clean_cache( int $now ): void {
+		foreach ( self::$log_cache as $key => $timestamp ) {
+			if ( ( $now - $timestamp ) > self::$cache_duration ) {
+				unset( self::$log_cache[ $key ] );
+			}
+		}
+	}
 }

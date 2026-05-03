@@ -22,35 +22,35 @@
 
 namespace DiluxWP\CloudStorage;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 class DiluxDB {
 
-    const TABLE_VERSION = '1.2';
-    const TABLE_VERSION_OPTION = 'dilux_cs_db_version';
+	const TABLE_VERSION        = '1.2';
+	const TABLE_VERSION_OPTION = 'dilux_cs_db_version';
 
-    /**
-     * Get table name
-     */
-    public static function get_table_name() {
-        global $wpdb;
-        return $wpdb->prefix . 'dilux_cs_files';
-    }
+	/**
+	 * Get table name
+	 */
+	public static function get_table_name() {
+		global $wpdb;
+		return $wpdb->prefix . 'dilux_cs_files';
+	}
 
-    /**
-     * Create/update files table
-     * Called on plugin activation and version checks
-     */
-    public static function create_files_table() {
-        global $wpdb;
+	/**
+	 * Create/update files table
+	 * Called on plugin activation and version checks
+	 */
+	public static function create_files_table() {
+		global $wpdb;
 
-        $table_name = self::get_table_name();
-        $charset_collate = $wpdb->get_charset_collate();
+		$table_name      = self::get_table_name();
+		$charset_collate = $wpdb->get_charset_collate();
 
-        // 191 is max key length for utf8mb4 on older MySQL versions
-        $sql = "CREATE TABLE {$table_name} (
+		// 191 is max key length for utf8mb4 on older MySQL versions
+		$sql = "CREATE TABLE {$table_name} (
             `file` VARCHAR(500) NOT NULL COMMENT 'Relative file path',
             `size` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'File size in bytes',
             `transferred` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Bytes transferred so far',
@@ -69,251 +69,279 @@ class DiluxDB {
             KEY `synced_deleted` (`synced`, `deleted`)
         ) $charset_collate COMMENT='Dilux Cloud Storage file tracking';";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql );
 
-        // Update version
-        update_option(self::TABLE_VERSION_OPTION, self::TABLE_VERSION, false);
+		// Update version
+		update_option( self::TABLE_VERSION_OPTION, self::TABLE_VERSION, false );
 
-        Logger::info('[Dilux CS DB] Table created/updated: ' . $table_name);
-    }
+		Logger::info( '[Dilux CS DB] Table created/updated: ' . $table_name );
+	}
 
-    /**
-     * Check if table exists
-     */
-    public static function table_exists() {
-        global $wpdb;
-        $table_name = self::get_table_name();
+	/**
+	 * Check if table exists
+	 */
+	public static function table_exists() {
+		global $wpdb;
+		$table_name = self::get_table_name();
 
-        $query = $wpdb->prepare('SHOW TABLES LIKE %s', $table_name);
-        return $wpdb->get_var($query) === $table_name;
-    }
+		$query = $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name );
+		return $wpdb->get_var( $query ) === $table_name;
+	}
 
-    /**
-     * Add file to tracking table
-     * Uses REPLACE to handle duplicates
-     */
-    public static function add_file($file_path, $size) {
-        global $wpdb;
+	/**
+	 * Add file to tracking table
+	 * Uses REPLACE to handle duplicates
+	 */
+	public static function add_file( $file_path, $size ) {
+		global $wpdb;
 
-        $result = $wpdb->replace(
-            self::get_table_name(),
-            [
-                'file' => $file_path,
-                'size' => $size,
-                'synced' => 0,
-                'deleted' => 0,
-                'transferred' => 0,
-                'errors' => 0,
-                'upload_id' => null
-            ],
-            ['%s', '%d', '%d', '%d', '%d', '%d', '%s']
-        );
+		$result = $wpdb->replace(
+			self::get_table_name(),
+			array(
+				'file'        => $file_path,
+				'size'        => $size,
+				'synced'      => 0,
+				'deleted'     => 0,
+				'transferred' => 0,
+				'errors'      => 0,
+				'upload_id'   => null,
+			),
+			array( '%s', '%d', '%d', '%d', '%d', '%d', '%s' )
+		);
 
-        if ($result === false) {
-            Logger::error('[Dilux CS DB] Error adding file: ' . $wpdb->last_error);
-        }
+		if ( $result === false ) {
+			Logger::error( '[Dilux CS DB] Error adding file: ' . $wpdb->last_error );
+		}
 
-        return $result !== false;
-    }
+		return $result !== false;
+	}
 
-    /**
-     * Add multiple files in batch (more efficient)
-     */
-    public static function add_files_batch($files) {
-        global $wpdb;
+	/**
+	 * Add multiple files in batch (more efficient)
+	 */
+	public static function add_files_batch( $files ) {
+		global $wpdb;
 
-        if (empty($files)) {
-            return true;
-        }
+		if ( empty( $files ) ) {
+			return true;
+		}
 
-        $table_name = self::get_table_name();
-        $values = [];
-        $placeholders = [];
+		$table_name   = self::get_table_name();
+		$values       = array();
+		$placeholders = array();
 
-        foreach ($files as $file) {
-            $values[] = $file['path'];
-            $values[] = $file['size'];
-            $placeholders[] = "(%s, %d, 0, 0, 0, 0, NULL)";
-        }
+		foreach ( $files as $file ) {
+			$values[]       = $file['path'];
+			$values[]       = $file['size'];
+			$placeholders[] = '(%s, %d, 0, 0, 0, 0, NULL)';
+		}
 
-        $query = "INSERT INTO {$table_name}
+		$query = "INSERT INTO {$table_name}
                   (file, size, synced, deleted, transferred, errors, upload_id)
-                  VALUES " . implode(', ', $placeholders) . "
+                  VALUES " . implode( ', ', $placeholders ) . '
                   ON DUPLICATE KEY UPDATE
                       size = VALUES(size),
                       synced = 0,
                       deleted = 0,
                       transferred = 0,
                       errors = 0,
-                      upload_id = NULL";
+                      upload_id = NULL';
 
-        $result = $wpdb->query($wpdb->prepare($query, $values));
+		$result = $wpdb->query( $wpdb->prepare( $query, $values ) );
 
-        if ($result === false) {
-            Logger::error('[Dilux CS DB] Error adding files batch: ' . $wpdb->last_error);
-            return false;
-        }
+		if ( $result === false ) {
+			Logger::error( '[Dilux CS DB] Error adding files batch: ' . $wpdb->last_error );
+			return false;
+		}
 
-        Logger::info('[Dilux CS DB] Added ' . count($files) . ' files to tracking table');
-        return true;
-    }
+		Logger::info( '[Dilux CS DB] Added ' . count( $files ) . ' files to tracking table' );
+		return true;
+	}
 
-    /**
-     * Mark file as successfully synced (uploaded to cloud)
-     */
-    public static function mark_synced($file_path) {
-        global $wpdb;
+	/**
+	 * Mark file as successfully synced (uploaded to cloud)
+	 */
+	public static function mark_synced( $file_path ) {
+		global $wpdb;
 
-        $result = $wpdb->update(
-            self::get_table_name(),
-            [
-                'synced' => 1,
-                'transferred' => $wpdb->get_var($wpdb->prepare(
-                    "SELECT size FROM " . self::get_table_name() . " WHERE file = %s",
-                    $file_path
-                )),
-                'errors' => 0,
-                'upload_id' => null
-            ],
-            ['file' => $file_path],
-            ['%d', '%d', '%d', '%s'],
-            ['%s']
-        );
+		$result = $wpdb->update(
+			self::get_table_name(),
+			array(
+				'synced'      => 1,
+				'transferred' => $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT size FROM ' . self::get_table_name() . ' WHERE file = %s',
+						$file_path
+					)
+				),
+				'errors'      => 0,
+				'upload_id'   => null,
+			),
+			array( 'file' => $file_path ),
+			array( '%d', '%d', '%d', '%s' ),
+			array( '%s' )
+		);
 
-        // Debug logging when marking fails
-        if ($result === false || $result === 0) {
-            Logger::error('[Dilux DB] ⚠️ mark_synced FAILED for: ' . $file_path . ' (result=' . var_export($result, true) . ', wpdb->last_error=' . $wpdb->last_error . ')');
-        }
+		// Debug logging when marking fails
+		if ( $result === false || $result === 0 ) {
+			Logger::error( '[Dilux DB] ⚠️ mark_synced FAILED for: ' . $file_path . ' (result=' . var_export( $result, true ) . ', wpdb->last_error=' . $wpdb->last_error . ')' );
+		}
 
-        return $result;
-    }
+		return $result;
+	}
 
-    /**
-     * Mark file as successfully downloaded (reverse sync)
-     * Sets deleted=0 since file now exists locally
-     */
-    public static function mark_downloaded($file_path) {
-        global $wpdb;
+	/**
+	 * Mark file as successfully downloaded (reverse sync)
+	 * Sets deleted=0 since file now exists locally
+	 */
+	public static function mark_downloaded( $file_path ) {
+		global $wpdb;
 
-        return $wpdb->update(
-            self::get_table_name(),
-            [
-                'synced' => 1,
-                'deleted' => 0, // ⭐ File is no longer deleted (now exists locally)
-                'transferred' => $wpdb->get_var($wpdb->prepare(
-                    "SELECT size FROM " . self::get_table_name() . " WHERE file = %s",
-                    $file_path
-                )),
-                'errors' => 0,
-                'upload_id' => null
-            ],
-            ['file' => $file_path],
-            ['%d', '%d', '%d', '%d', '%s'],
-            ['%s']
-        );
-    }
+		return $wpdb->update(
+			self::get_table_name(),
+			array(
+				'synced'      => 1,
+				'deleted'     => 0, // ⭐ File is no longer deleted (now exists locally)
+				'transferred' => $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT size FROM ' . self::get_table_name() . ' WHERE file = %s',
+						$file_path
+					)
+				),
+				'errors'      => 0,
+				'upload_id'   => null,
+			),
+			array( 'file' => $file_path ),
+			array( '%d', '%d', '%d', '%d', '%s' ),
+			array( '%s' )
+		);
+	}
 
-    /**
-     * Update transferred bytes for a file
-     */
-    public static function update_progress($file_path, $bytes_transferred) {
-        global $wpdb;
+	/**
+	 * Update transferred bytes for a file
+	 */
+	public static function update_progress( $file_path, $bytes_transferred ) {
+		global $wpdb;
 
-        return $wpdb->query($wpdb->prepare("
-            UPDATE " . self::get_table_name() . "
+		return $wpdb->query(
+			$wpdb->prepare(
+				'
+            UPDATE ' . self::get_table_name() . '
             SET transferred = transferred + %d,
                 errors = 0
             WHERE file = %s
-        ", $bytes_transferred, $file_path));
-    }
+        ',
+				$bytes_transferred,
+				$file_path
+			)
+		);
+	}
 
-    /**
-     * Increment error count for a file
-     *
-     * @param string $file_path Relative file path
-     * @param string|null $error_message Optional error message to store
-     */
-    public static function increment_error($file_path, $error_message = null) {
-        global $wpdb;
+	/**
+	 * Increment error count for a file
+	 *
+	 * @param string      $file_path Relative file path
+	 * @param string|null $error_message Optional error message to store
+	 */
+	public static function increment_error( $file_path, $error_message = null ) {
+		global $wpdb;
 
-        if ($error_message !== null) {
-            return $wpdb->query($wpdb->prepare("
-                UPDATE " . self::get_table_name() . "
+		if ( $error_message !== null ) {
+			return $wpdb->query(
+				$wpdb->prepare(
+					'
+                UPDATE ' . self::get_table_name() . '
                 SET errors = errors + 1,
                     error_message = %s
                 WHERE file = %s
-            ", $error_message, $file_path));
-        } else {
-            return $wpdb->query($wpdb->prepare("
-                UPDATE " . self::get_table_name() . "
+            ',
+					$error_message,
+					$file_path
+				)
+			);
+		} else {
+			return $wpdb->query(
+				$wpdb->prepare(
+					'
+                UPDATE ' . self::get_table_name() . '
                 SET errors = errors + 1
                 WHERE file = %s
-            ", $file_path));
-        }
-    }
+            ',
+					$file_path
+				)
+			);
+		}
+	}
 
-    /**
-     * Set upload_id for multipart upload tracking
-     */
-    public static function set_upload_id($file_path, $upload_id) {
-        global $wpdb;
+	/**
+	 * Set upload_id for multipart upload tracking
+	 */
+	public static function set_upload_id( $file_path, $upload_id ) {
+		global $wpdb;
 
-        return $wpdb->update(
-            self::get_table_name(),
-            ['upload_id' => $upload_id],
-            ['file' => $file_path],
-            ['%s'],
-            ['%s']
-        );
-    }
+		return $wpdb->update(
+			self::get_table_name(),
+			array( 'upload_id' => $upload_id ),
+			array( 'file' => $file_path ),
+			array( '%s' ),
+			array( '%s' )
+		);
+	}
 
-    /**
-     * Get pending files for upload
-     *
-     * @param int $limit Max number of files
-     * @param int|null $max_bytes Max total bytes (for batching)
-     * @return array Files to upload
-     */
-    public static function get_pending_files($limit = 1000, $max_bytes = null) {
-        global $wpdb;
+	/**
+	 * Get pending files for upload
+	 *
+	 * @param int      $limit Max number of files
+	 * @param int|null $max_bytes Max total bytes (for batching)
+	 * @return array Files to upload
+	 */
+	public static function get_pending_files( $limit = 1000, $max_bytes = null ) {
+		global $wpdb;
 
-        $files = $wpdb->get_results($wpdb->prepare("
+		$files = $wpdb->get_results(
+			$wpdb->prepare(
+				'
             SELECT file, size, transferred, errors, upload_id
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 0 AND errors < 3
             ORDER BY errors ASC, size DESC, file ASC
             LIMIT %d
-        ", $limit), ARRAY_A);
+        ',
+				$limit
+			),
+			ARRAY_A
+		);
 
-        // If max_bytes specified, filter by cumulative size
-        if ($max_bytes && !empty($files)) {
-            $batch = [];
-            $total_size = 0;
+		// If max_bytes specified, filter by cumulative size
+		if ( $max_bytes && ! empty( $files ) ) {
+			$batch      = array();
+			$total_size = 0;
 
-            foreach ($files as $file) {
-                // Always include at least 1 file even if it exceeds max_bytes
-                if (count($batch) > 0 && ($total_size + $file['size']) > $max_bytes) {
-                    break;
-                }
+			foreach ( $files as $file ) {
+				// Always include at least 1 file even if it exceeds max_bytes
+				if ( count( $batch ) > 0 && ( $total_size + $file['size'] ) > $max_bytes ) {
+					break;
+				}
 
-                $batch[] = $file;
-                $total_size += $file['size'];
-            }
+				$batch[]     = $file;
+				$total_size += $file['size'];
+			}
 
-            return $batch;
-        }
+			return $batch;
+		}
 
-        return $files;
-    }
+		return $files;
+	}
 
-    /**
-     * Get sync statistics
-     */
-    public static function get_stats() {
-        global $wpdb;
+	/**
+	 * Get sync statistics
+	 */
+	public static function get_stats() {
+		global $wpdb;
 
-        $stats = $wpdb->get_row("
+		$stats = $wpdb->get_row(
+			'
             SELECT
                 COUNT(*) as total_files,
                 COALESCE(SUM(size), 0) as total_size,
@@ -322,294 +350,325 @@ class DiluxDB {
                 SUM(CASE WHEN synced = 0 AND deleted = 0 AND errors >= 3 THEN 1 ELSE 0 END) as failed_files,
                 COALESCE(SUM(transferred), 0) as total_transferred,
                 SUM(CASE WHEN synced = 0 AND deleted = 0 THEN 1 ELSE 0 END) as pending_files
-            FROM " . self::get_table_name() . "
-        ", ARRAY_A);
+            FROM ' . self::get_table_name() . '
+        ',
+			ARRAY_A
+		);
 
-        // Calculate percentage
-        if ($stats['total_files'] > 0) {
-            $stats['percentage'] = round(($stats['synced_files'] / $stats['total_files']) * 100, 1);
-        } else {
-            $stats['percentage'] = 0;
-        }
+		// Calculate percentage
+		if ( $stats['total_files'] > 0 ) {
+			$stats['percentage'] = round( ( $stats['synced_files'] / $stats['total_files'] ) * 100, 1 );
+		} else {
+			$stats['percentage'] = 0;
+		}
 
-        return $stats;
-    }
+		return $stats;
+	}
 
-    /**
-     * Get failed files (ALL files not synced, regardless of error count)
-     */
-    public static function get_failed_files() {
-        global $wpdb;
+	/**
+	 * Get failed files (ALL files not synced, regardless of error count)
+	 */
+	public static function get_failed_files() {
+		global $wpdb;
 
-        return $wpdb->get_results("
+		return $wpdb->get_results(
+			'
             SELECT file, size, errors, error_message
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 0 AND deleted = 0
             ORDER BY errors DESC, file ASC
-        ", ARRAY_A);
-    }
+        ',
+			ARRAY_A
+		);
+	}
 
-    /**
-     * Get all synced files (for deletion)
-     */
-    public static function get_synced_files() {
-        global $wpdb;
+	/**
+	 * Get all synced files (for deletion)
+	 */
+	public static function get_synced_files() {
+		global $wpdb;
 
-        return $wpdb->get_results("
+		return $wpdb->get_results(
+			'
             SELECT file, size
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 1
             ORDER BY file ASC
-        ", ARRAY_A);
-    }
+        ',
+			ARRAY_A
+		);
+	}
 
-    /**
-     * Reset error counts (for retry)
-     */
-    public static function reset_errors() {
-        global $wpdb;
+	/**
+	 * Reset error counts (for retry)
+	 */
+	public static function reset_errors() {
+		global $wpdb;
 
-        $count = $wpdb->query("
-            UPDATE " . self::get_table_name() . "
+		$count = $wpdb->query(
+			'
+            UPDATE ' . self::get_table_name() . '
             SET errors = 0, transferred = 0, error_message = NULL
             WHERE synced = 0 AND errors >= 3
-        ");
+        '
+		);
 
-        Logger::info('[Dilux CS DB] Reset errors for ' . $count . ' files');
-        return $count;
-    }
+		Logger::info( '[Dilux CS DB] Reset errors for ' . $count . ' files' );
+		return $count;
+	}
 
-    /**
-     * Clear entire table (before new sync)
-     */
-    public static function clear_table() {
-        global $wpdb;
+	/**
+	 * Clear entire table (before new sync)
+	 */
+	public static function clear_table() {
+		global $wpdb;
 
-        $result = $wpdb->query("TRUNCATE TABLE " . self::get_table_name());
+		$result = $wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
 
-        if ($result !== false) {
-            Logger::info('[Dilux CS DB] Table cleared');
-        }
+		if ( $result !== false ) {
+			Logger::info( '[Dilux CS DB] Table cleared' );
+		}
 
-        return $result !== false;
-    }
+		return $result !== false;
+	}
 
-    /**
-     * Reset all files to pending (for "from scratch" sync)
-     */
-    public static function reset_all_files_to_pending() {
-        global $wpdb;
+	/**
+	 * Reset all files to pending (for "from scratch" sync)
+	 */
+	public static function reset_all_files_to_pending() {
+		global $wpdb;
 
-        $result = $wpdb->query("
-            UPDATE " . self::get_table_name() . "
+		$result = $wpdb->query(
+			'
+            UPDATE ' . self::get_table_name() . '
             SET synced = 0,
                 transferred = 0,
                 error_message = NULL,
                 errors = 0
-        ");
+        '
+		);
 
-        if ($result !== false) {
-            Logger::info('[Dilux CS DB] Reset ' . $result . ' files to pending');
-        }
+		if ( $result !== false ) {
+			Logger::info( '[Dilux CS DB] Reset ' . $result . ' files to pending' );
+		}
 
-        return $result !== false;
-    }
+		return $result !== false;
+	}
 
-    /**
-     * Reset only failed files to pending (for "retry failed" sync)
-     */
-    public static function reset_failed_files_to_pending() {
-        global $wpdb;
+	/**
+	 * Reset only failed files to pending (for "retry failed" sync)
+	 */
+	public static function reset_failed_files_to_pending() {
+		global $wpdb;
 
-        // Reset ALL failed files (synced=0) back to pending for retry
-        // Reset error counter to 0 to give them fresh attempts
-        $result = $wpdb->query("
-            UPDATE " . self::get_table_name() . "
+		// Reset ALL failed files (synced=0) back to pending for retry
+		// Reset error counter to 0 to give them fresh attempts
+		$result = $wpdb->query(
+			'
+            UPDATE ' . self::get_table_name() . '
             SET transferred = 0,
                 error_message = NULL,
                 errors = 0
             WHERE synced = 0 AND deleted = 0
-        ");
+        '
+		);
 
-        if ($result !== false) {
-            Logger::info('[Dilux CS DB] Reset ' . $result . ' failed files to pending for retry (errors → 0)');
-        }
+		if ( $result !== false ) {
+			Logger::info( '[Dilux CS DB] Reset ' . $result . ' failed files to pending for retry (errors → 0)' );
+		}
 
-        return $result !== false;
-    }
+		return $result !== false;
+	}
 
-    /**
-     * Delete synced files from table (cleanup after successful sync)
-     */
-    public static function delete_synced_files() {
-        global $wpdb;
+	/**
+	 * Delete synced files from table (cleanup after successful sync)
+	 */
+	public static function delete_synced_files() {
+		global $wpdb;
 
-        $count = $wpdb->query("
-            DELETE FROM " . self::get_table_name() . "
+		$count = $wpdb->query(
+			'
+            DELETE FROM ' . self::get_table_name() . '
             WHERE synced = 1
-        ");
+        '
+		);
 
-        Logger::info('[Dilux CS DB] Deleted ' . $count . ' synced files from tracking');
-        return $count;
-    }
+		Logger::info( '[Dilux CS DB] Deleted ' . $count . ' synced files from tracking' );
+		return $count;
+	}
 
-    /**
-     * Get total count of files
-     */
-    public static function get_total_count() {
-        global $wpdb;
+	/**
+	 * Get total count of files
+	 */
+	public static function get_total_count() {
+		global $wpdb;
 
-        return (int) $wpdb->get_var("SELECT COUNT(*) FROM " . self::get_table_name());
-    }
+		return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::get_table_name() );
+	}
 
-    /**
-     * Check if sync has any pending files
-     */
-    public static function has_pending_files() {
-        global $wpdb;
+	/**
+	 * Check if sync has any pending files
+	 */
+	public static function has_pending_files() {
+		global $wpdb;
 
-        $count = $wpdb->get_var("
+		$count = $wpdb->get_var(
+			'
             SELECT COUNT(*)
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 0 AND errors < 3
-        ");
+        '
+		);
 
-        return $count > 0;
-    }
+		return $count > 0;
+	}
 
-    /**
-     * Add cloud-only file (exists in cloud but not locally = deleted)
-     *
-     * @param string $file_path Relative file path
-     * @param int $size File size in bytes
-     */
-    public static function add_cloud_only_file($file_path, $size) {
-        global $wpdb;
+	/**
+	 * Add cloud-only file (exists in cloud but not locally = deleted)
+	 *
+	 * @param string $file_path Relative file path
+	 * @param int    $size File size in bytes
+	 */
+	public static function add_cloud_only_file( $file_path, $size ) {
+		global $wpdb;
 
-        $result = $wpdb->replace(
-            self::get_table_name(),
-            [
-                'file' => $file_path,
-                'size' => $size,
-                'synced' => 1,
-                'deleted' => 1,
-                'transferred' => $size,
-                'errors' => 0,
-                'upload_id' => null
-            ],
-            ['%s', '%d', '%d', '%d', '%d', '%d', '%s']
-        );
+		$result = $wpdb->replace(
+			self::get_table_name(),
+			array(
+				'file'        => $file_path,
+				'size'        => $size,
+				'synced'      => 1,
+				'deleted'     => 1,
+				'transferred' => $size,
+				'errors'      => 0,
+				'upload_id'   => null,
+			),
+			array( '%s', '%d', '%d', '%d', '%d', '%d', '%s' )
+		);
 
-        if ($result === false) {
-            Logger::error('[Dilux CS DB] Error adding cloud-only file: ' . $wpdb->last_error);
-        }
+		if ( $result === false ) {
+			Logger::error( '[Dilux CS DB] Error adding cloud-only file: ' . $wpdb->last_error );
+		}
 
-        return $result !== false;
-    }
+		return $result !== false;
+	}
 
-    /**
-     * Add multiple cloud-only files in batch
-     *
-     * @param array $files Array of ['path' => string, 'size' => int]
-     */
-    public static function add_cloud_only_files_batch($files) {
-        global $wpdb;
+	/**
+	 * Add multiple cloud-only files in batch
+	 *
+	 * @param array $files Array of ['path' => string, 'size' => int]
+	 */
+	public static function add_cloud_only_files_batch( $files ) {
+		global $wpdb;
 
-        if (empty($files)) {
-            return true;
-        }
+		if ( empty( $files ) ) {
+			return true;
+		}
 
-        $table_name = self::get_table_name();
-        $values = [];
-        $placeholders = [];
+		$table_name   = self::get_table_name();
+		$values       = array();
+		$placeholders = array();
 
-        foreach ($files as $file) {
-            $values[] = $file['path'];
-            $values[] = $file['size'];
-            $values[] = $file['size']; // transferred = size
-            $placeholders[] = "(%s, %d, 1, 1, %d, 0, NULL)";
-        }
+		foreach ( $files as $file ) {
+			$values[]       = $file['path'];
+			$values[]       = $file['size'];
+			$values[]       = $file['size']; // transferred = size
+			$placeholders[] = '(%s, %d, 1, 1, %d, 0, NULL)';
+		}
 
-        $query = "INSERT INTO {$table_name}
+		$query = "INSERT INTO {$table_name}
                   (file, size, synced, deleted, transferred, errors, upload_id)
-                  VALUES " . implode(', ', $placeholders) . "
+                  VALUES " . implode( ', ', $placeholders ) . '
                   ON DUPLICATE KEY UPDATE
                       size = VALUES(size),
                       synced = 1,
                       deleted = 1,
                       transferred = VALUES(transferred),
-                      errors = 0";
+                      errors = 0';
 
-        $result = $wpdb->query($wpdb->prepare($query, $values));
+		$result = $wpdb->query( $wpdb->prepare( $query, $values ) );
 
-        if ($result === false) {
-            Logger::error('[Dilux CS DB] Error adding cloud-only files batch: ' . $wpdb->last_error);
-            return false;
-        }
+		if ( $result === false ) {
+			Logger::error( '[Dilux CS DB] Error adding cloud-only files batch: ' . $wpdb->last_error );
+			return false;
+		}
 
-        Logger::info('[Dilux CS DB] Added ' . count($files) . ' cloud-only files (deleted locally)');
-        return true;
-    }
+		Logger::info( '[Dilux CS DB] Added ' . count( $files ) . ' cloud-only files (deleted locally)' );
+		return true;
+	}
 
-    /**
-     * Get deleted files (synced to cloud but deleted locally)
-     * These are files that need to be downloaded during disconnect
-     *
-     * @param int $limit Max number of files
-     * @return array Files to download
-     */
-    public static function get_deleted_files($limit = 1000) {
-        global $wpdb;
+	/**
+	 * Get deleted files (synced to cloud but deleted locally)
+	 * These are files that need to be downloaded during disconnect
+	 *
+	 * @param int $limit Max number of files
+	 * @return array Files to download
+	 */
+	public static function get_deleted_files( $limit = 1000 ) {
+		global $wpdb;
 
-        return $wpdb->get_results($wpdb->prepare("
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				'
             SELECT file, size, errors
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 1 AND deleted = 1 AND errors < 3
             ORDER BY errors ASC, file ASC
             LIMIT %d
-        ", $limit), ARRAY_A);
-    }
+        ',
+				$limit
+			),
+			ARRAY_A
+		);
+	}
 
-    /**
-     * Get stats for deleted files
-     */
-    public static function get_deleted_stats() {
-        global $wpdb;
+	/**
+	 * Get stats for deleted files
+	 */
+	public static function get_deleted_stats() {
+		global $wpdb;
 
-        return $wpdb->get_row("
+		return $wpdb->get_row(
+			'
             SELECT
                 COUNT(*) as files,
                 COALESCE(SUM(size), 0) as size
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 1 AND deleted = 1
-        ", ARRAY_A);
-    }
+        ',
+			ARRAY_A
+		);
+	}
 
-    /**
-     * Check if there are deleted files to download
-     */
-    public static function has_deleted_files() {
-        global $wpdb;
+	/**
+	 * Check if there are deleted files to download
+	 */
+	public static function has_deleted_files() {
+		global $wpdb;
 
-        $count = $wpdb->get_var("
+		$count = $wpdb->get_var(
+			'
             SELECT COUNT(*)
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 1 AND deleted = 1 AND errors < 3
-        ");
+        '
+		);
 
-        return $count > 0;
-    }
+		return $count > 0;
+	}
 
-    /**
-     * Count deleted files (for progress calculation)
-     */
-    public static function count_deleted_files() {
-        global $wpdb;
+	/**
+	 * Count deleted files (for progress calculation)
+	 */
+	public static function count_deleted_files() {
+		global $wpdb;
 
-        return (int) $wpdb->get_var("
+		return (int) $wpdb->get_var(
+			'
             SELECT COUNT(*)
-            FROM " . self::get_table_name() . "
+            FROM ' . self::get_table_name() . '
             WHERE synced = 1 AND deleted = 1 AND errors < 3
-        ");
-    }
+        '
+		);
+	}
 }
