@@ -26,6 +26,15 @@ namespace DiluxWP\CloudStorage;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+/**
+ * Imagick image editor that handles diluxcloud:// paths via temp files.
+ *
+ * Extends the WordPress core Imagick editor so the standard image-resize
+ * pipeline keeps working when offloading is active. WordPress core will
+ * try Imagick first then fall back to GD; both are wired through this
+ * pair (Dilux_Image_Editor_Imagick + Dilux_Image_Editor_GD).
+ */
 class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 
 	/**

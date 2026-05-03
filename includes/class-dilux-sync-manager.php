@@ -1116,6 +1116,7 @@ class SyncManager {
 	 *
 	 * @param array $progress
 	 * @return array
+	 * @param mixed $sync_meta
 	 */
 	/**
 	 * Complete sync using new DB table architecture

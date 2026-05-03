@@ -42,6 +42,16 @@ use DiluxWP\CloudStorage\DTOs\FileInfo;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+/**
+ * Dilux One Cloud provider — managed cloud storage backed by the Dilux
+ * One Cloud REST API.
+ *
+ * All file operations route through https://api.diluxone.com/cloud-storage-wp/v1
+ * authenticated with the API key the user enters in the admin Cloud
+ * Provider tab. Implements the full CloudStorageClientInterface contract
+ * including parallel and chunked-upload helpers used by SyncManager.
+ */
 class DiluxOneCloudProvider implements CloudStorageClientInterface {
 
 	/** @var string DiluxOne API key */

@@ -26,6 +26,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Custom-table data-access layer for sync state.
+ *
+ * Owns the wp_dilux_cs_files table — a per-file record of sync status
+ * (synced, deleted, errors, error_message, upload_id, timestamps).
+ * Created on plugin init via DiluxDB::create_files_table() and migrated
+ * via TABLE_VERSION when the schema changes. All queries route through
+ * $wpdb->prepare() inside the methods of this class.
+ */
 class DiluxDB {
 
 	const TABLE_VERSION        = '1.2';

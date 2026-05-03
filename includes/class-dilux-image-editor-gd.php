@@ -26,6 +26,14 @@ namespace DiluxWP\CloudStorage;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+/**
+ * GD image editor that handles diluxcloud:// paths via temp files.
+ *
+ * Fallback used when Imagick is unavailable on the host. Extends the
+ * WordPress core GD editor so standard image processing works against
+ * cloud-hosted media.
+ */
 class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 
 	/**

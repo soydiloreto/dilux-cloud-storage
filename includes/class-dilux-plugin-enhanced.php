@@ -30,6 +30,15 @@ use DiluxWP\CloudStorage\Enums\PluginState;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+/**
+ * Top-level plugin orchestrator.
+ *
+ * Wires the WordPress lifecycle: activation, deactivation, init,
+ * AJAX handler registration, custom-table maintenance, stream-wrapper
+ * activation. Singleton accessed via Plugin::get_instance(). Holds
+ * references to the Admin and SyncManager subsystems.
+ */
 class Plugin {
 
 	/** @var Plugin|null Singleton instance */
