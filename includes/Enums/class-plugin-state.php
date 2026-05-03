@@ -31,9 +31,9 @@ class PluginState {
 	/**
 	 * Get all available states
 	 *
-	 * @return array<string, mixed>
+	 * @return array<int, string>
 	 */
-	public static function get_all_states() {
+	public static function get_all_states(): array {
 		return array(
 			self::NOT_CONFIGURED,
 			self::CONFIGURED,

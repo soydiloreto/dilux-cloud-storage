@@ -318,7 +318,7 @@ class DiluxDB {
 	 *
 	 * @param int      $limit Max number of files
 	 * @param int|null $max_bytes Max total bytes (for batching)
-	 * @return array<string, mixed> Files to upload
+	 * @return array<int, array<string, mixed>> Files to upload
 	 */
 	public static function get_pending_files( $limit = 1000, $max_bytes = null ) {
 		global $wpdb;

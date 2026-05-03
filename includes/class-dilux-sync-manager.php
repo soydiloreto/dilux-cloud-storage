@@ -724,7 +724,7 @@ class SyncManager {
 	 * Scan uploads directory for files to sync
 	 *
 	 * @param bool $initial_sync Whether this is an initial sync (optimizes MD5 calculation)
-	 * @return array<string, mixed> Array of file information
+	 * @return array<int, array<string, mixed>> Array of file information
 	 */
 	public function scan_files_to_sync( $initial_sync = false ) {
 		$files          = array();
