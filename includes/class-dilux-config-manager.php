@@ -1,4 +1,10 @@
 <?php
+/**
+ * Single source of truth for plugin configuration and connection-health state.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage;
 
 use DiluxWP\CloudStorage\Enums\PluginState;

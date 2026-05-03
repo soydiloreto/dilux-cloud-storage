@@ -1,4 +1,10 @@
 <?php
+/**
+ * Factory that instantiates a cloud-storage provider by name.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\Factories;
 
 use DiluxWP\CloudStorage\Interfaces\CloudStorageClientInterface;

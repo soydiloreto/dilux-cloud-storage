@@ -1,4 +1,10 @@
 <?php
+/**
+ * Result envelope for provider connection tests.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

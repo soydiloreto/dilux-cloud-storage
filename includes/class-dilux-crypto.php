@@ -1,4 +1,10 @@
 <?php
+/**
+ * Symmetric encryption helper for sensitive credentials at rest (AES-256-GCM).
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage;
 
 if ( ! defined( 'ABSPATH' ) ) {

@@ -33,6 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Custom stream wrapper that redirects file operations to cloud storage.
  * This is the core component that makes WordPress write directly to cloud.
  */
+
 class CloudStreamWrapper {
 
 	/** @var string Protocol name */

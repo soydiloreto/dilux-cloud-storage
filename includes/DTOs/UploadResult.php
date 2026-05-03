@@ -1,4 +1,10 @@
 <?php
+/**
+ * Single-file upload result envelope.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

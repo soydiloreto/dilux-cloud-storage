@@ -1,4 +1,10 @@
 <?php
+/**
+ * Admin Settings tab — global plugin settings.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }

@@ -33,6 +33,7 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	 *
 	 * @var string
 	 */
+
 	protected $remote_filename = null;
 
 	/**

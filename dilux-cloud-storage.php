@@ -41,6 +41,7 @@ global $dilux_cs_plugin;
  *
  * @return void
  */
+
 function dilux_cs_init() {
 	global $dilux_cs_plugin;
 

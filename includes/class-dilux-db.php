@@ -34,6 +34,7 @@ class DiluxDB {
 	/**
 	 * Get table name
 	 */
+
 	public static function get_table_name() {
 		global $wpdb;
 		return $wpdb->prefix . 'dilux_cs_files';

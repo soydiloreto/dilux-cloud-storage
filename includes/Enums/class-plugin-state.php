@@ -1,4 +1,10 @@
 <?php
+/**
+ * PluginState enum — values for the plugin top-level state machine.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\Enums;
 
 if ( ! defined( 'ABSPATH' ) ) {

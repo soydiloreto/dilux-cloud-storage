@@ -1,4 +1,10 @@
 <?php
+/**
+ * Plugin uninstall and cleanup helpers.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage;
 
 if ( ! defined( 'ABSPATH' ) ) {

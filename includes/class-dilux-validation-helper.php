@@ -1,4 +1,10 @@
 <?php
+/**
+ * Validation helpers for sync operations.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage;
 
 use DiluxWP\CloudStorage\Enums\PluginState;

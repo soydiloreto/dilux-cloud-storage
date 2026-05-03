@@ -118,6 +118,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - DB write size: ~100 bytes/batch (vs 5MB before)
  * - System stability: No MySQL crashes, no PHP-FPM saturation
  */
+
 class SyncManager {
 
 	private $cloud_client;

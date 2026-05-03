@@ -34,6 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @package DiluxWP\CloudStorage
  * @since 1.0.0
  */
+
 class Logger {
 
 	/** @var array<string, int> Cache of message hash → timestamp last logged, for spam prevention. */

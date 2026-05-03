@@ -1,4 +1,10 @@
 <?php
+/**
+ * Filter parameters for sync queries.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

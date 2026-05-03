@@ -1,4 +1,10 @@
 <?php
+/**
+ * Azure provider configuration value object.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

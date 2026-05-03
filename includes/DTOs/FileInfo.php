@@ -1,4 +1,10 @@
 <?php
+/**
+ * File metadata value object (path, size, mtime, hash).
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

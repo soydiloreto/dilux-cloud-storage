@@ -1,4 +1,10 @@
 <?php
+/**
+ * Generic success/error result envelope used across providers.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

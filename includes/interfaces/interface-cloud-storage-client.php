@@ -1,4 +1,10 @@
 <?php
+/**
+ * Contract that every cloud-storage provider implementation must satisfy.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\Interfaces;
 
 if ( ! defined( 'ABSPATH' ) ) {

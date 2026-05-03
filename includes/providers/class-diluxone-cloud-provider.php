@@ -45,6 +45,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DiluxOneCloudProvider implements CloudStorageClientInterface {
 
 	/** @var string DiluxOne API key */
+
 	private string $api_key;
 
 	/** @var string DiluxOne API base URL */

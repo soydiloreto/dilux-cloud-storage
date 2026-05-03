@@ -1,4 +1,10 @@
 <?php
+/**
+ * Sync operation result envelope.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 use DiluxWP\CloudStorage\Enums\SyncStatus;

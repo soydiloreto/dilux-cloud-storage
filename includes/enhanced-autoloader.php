@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Autoloader function
  */
+
 function dilux_cs_autoloader( $class_name ) {
 	// Only autoload our classes
 	if ( strpos( $class_name, 'DiluxWP\\CloudStorage\\' ) !== 0 ) {

@@ -1,4 +1,10 @@
 <?php
+/**
+ * Sync progress snapshot value object.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 use DiluxWP\CloudStorage\Enums\SyncStatus;

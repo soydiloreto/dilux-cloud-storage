@@ -1,4 +1,10 @@
 <?php
+/**
+ * Extension-to-MIME-type mapping helper.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage;
 
 if ( ! defined( 'ABSPATH' ) ) {

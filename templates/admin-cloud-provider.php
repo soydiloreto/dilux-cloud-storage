@@ -104,6 +104,7 @@ $has_files_in_db = $template_data['has_files_in_db'] ?? false;
 					echo wp_kses(
 						sprintf(
 							/* translators: 1: opening anchor tag, 2: closing anchor tag */
+
 							__( 'Enter your API Key from your Dilux One account. Don\'t have one? %1$sGet started%2$s', 'dilux-cloud-storage' ),
 							'<a href="https://diluxone.com/" target="_blank" rel="noopener noreferrer">',
 							'</a>'

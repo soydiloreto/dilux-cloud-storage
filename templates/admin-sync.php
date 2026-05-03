@@ -92,6 +92,7 @@ $pending_count   = $template_data['pending_count'] ?? 0;
 							<?php
 							printf(
 								/* translators: %d: number of files that failed to upload */
+
 								esc_html__( 'Synchronization completed but %d files could not be uploaded. You can retry the failed files or proceed with offloading.', 'dilux-cloud-storage' ),
 								(int) $failed_count
 							);

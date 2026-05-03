@@ -118,6 +118,7 @@ $section = $section ?? 'status';
 						<?php
 						printf(
 							/* translators: %s: short reason, e.g. "credentials unreadable" */
+
 							esc_html__( 'Paused (%s) — see banner above.', 'dilux-cloud-storage' ),
 							esc_html( $pause_label )
 						);

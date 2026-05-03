@@ -33,6 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Plugin {
 
 	/** @var Plugin|null Singleton instance */
+
 	private static ?Plugin $instance = null;
 
 	/** @var Admin|null Admin instance */

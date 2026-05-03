@@ -1,4 +1,10 @@
 <?php
+/**
+ * Plugin user-facing settings value object.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\DTOs;
 
 if ( ! defined( 'ABSPATH' ) ) {

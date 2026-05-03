@@ -33,6 +33,7 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	 *
 	 * @var string
 	 */
+
 	protected $remote_filename = null;
 
 	/**

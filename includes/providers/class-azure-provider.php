@@ -44,6 +44,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Implementation of CloudStorageClientInterface for Azure Blob Storage.
  */
+
 class AzureProvider implements CloudStorageClientInterface {
 
 	private string $storage_account;

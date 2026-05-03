@@ -26,6 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Admin interface for Cloud Storage plugin.
  */
+
 class Admin {
 
 	/**

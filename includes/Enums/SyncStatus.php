@@ -1,4 +1,10 @@
 <?php
+/**
+ * SyncStatus enum — values for the sync state machine.
+ *
+ * @package DiluxWP\CloudStorage
+ */
+
 namespace DiluxWP\CloudStorage\Enums;
 
 if ( ! defined( 'ABSPATH' ) ) {

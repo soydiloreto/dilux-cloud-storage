@@ -89,6 +89,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 						$provider_display = $provider_names[ $config['cloud_provider'] ?? '' ] ?? ucfirst( $config['cloud_provider'] ?? '' );
 						echo wp_kses(
 							/* translators: %s: cloud provider name */
+
 							sprintf( __( 'Provider: <strong>%s</strong>', 'dilux-cloud-storage' ), esc_html( $provider_display ) ),
 							array( 'strong' => array() )
 						);
