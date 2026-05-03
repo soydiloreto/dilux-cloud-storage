@@ -157,6 +157,9 @@ class ConfigManagerTest extends IntegrationTestCase {
         $this->assertFalse($config['debug_enabled']);
         $this->assertTrue($config['keep_local_files']);
         $this->assertSame(60, $config['timeout']);
-        $this->assertSame(524288000, $config['max_file_size']);
+        // 20 MB default — see ConfigManager::DEFAULT_CONFIG. The mug-website-v2
+        // version of this plugin used 500 MB; the current dilux-cloud-storage
+        // tightened it to a safer cap that fits most shared-hosting limits.
+        $this->assertSame(20971520, $config['max_file_size']);
     }
 }
