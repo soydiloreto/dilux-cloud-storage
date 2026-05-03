@@ -1,0 +1,121 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  php-lint:
+    name: PHP ${{ matrix.php }} syntax check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: none
+
+      - name: Lint all PHP files
+        run: |
+          set -e
+          find . -type f -name '*.php' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -not -path './.wordpress-org/*' \
+            -exec php -l {} \;
+
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run WordPress Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: ./
+          # Plugin Check runs against the GitHub repo tree, not against the
+          # zip that gets deployed to wp.org SVN. The two ignored codes below
+          # flag files (.gitignore, .github/) that are excluded from the
+          # wp.org deploy via .distignore — they legitimately exist in the
+          # GitHub repo for development purposes and are NOT shipped to end
+          # users. Other security/performance/accessibility checks remain
+          # active.
+          ignore-codes: hidden_files,github_directory
+
+  readme-validation:
+    name: Validate readme.txt and version alignment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify required readme.txt headers are present
+        run: |
+          set -e
+          required_headers=(
+            "Contributors"
+            "Tags"
+            "Requires at least"
+            "Tested up to"
+            "Requires PHP"
+            "Stable tag"
+            "License"
+          )
+          missing=0
+          for header in "${required_headers[@]}"; do
+            if ! grep -qE "^${header}:" readme.txt; then
+              echo "::error file=readme.txt::Missing required header: ${header}"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All required readme.txt headers present."
+
+      - name: Verify Stable tag matches PHP Version header
+        run: |
+          set -e
+          stable_tag=$(grep -oP '^Stable tag:\s*\K\S+' readme.txt)
+          php_version=$(grep -oP '^\s*\*\s*Version:\s*\K\S+' dilux-cloud-storage.php)
+          define_version=$(grep -oP "DILUX_CS_VERSION',\s*'\K[^']+" dilux-cloud-storage.php)
+
+          echo "readme.txt Stable tag:       ${stable_tag}"
+          echo "PHP file Version header:     ${php_version}"
+          echo "PHP file DILUX_CS_VERSION:   ${define_version}"
+
+          if [ "${stable_tag}" != "${php_version}" ]; then
+            echo "::error::Version mismatch — readme.txt Stable tag (${stable_tag}) does not match PHP Version header (${php_version}). These must match before tagging a release."
+            exit 1
+          fi
+
+          if [ "${php_version}" != "${define_version}" ]; then
+            echo "::error file=dilux-cloud-storage.php::Version mismatch — PHP Version header (${php_version}) does not match DILUX_CS_VERSION constant (${define_version})."
+            exit 1
+          fi
+
+          echo "All three version markers aligned at ${stable_tag}."
+
+      - name: Verify Changelog has entry for current version
+        run: |
+          set -e
+          stable_tag=$(grep -oP '^Stable tag:\s*\K\S+' readme.txt)
+          if ! grep -qE "^=\s*${stable_tag}\s*=" readme.txt; then
+            echo "::error file=readme.txt::No changelog entry found for version ${stable_tag}. Add a '= ${stable_tag} =' section under '== Changelog =='."
+            exit 1
+          fi
+          echo "Changelog entry for ${stable_tag} found."
