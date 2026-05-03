@@ -714,17 +714,6 @@ class Admin {
 	}
 
 	/**
-	 * Get basic migration status for templates
-	 */
-	private static function get_basic_migration_status() {
-		return array(
-			'status'   => 'not_started',
-			'progress' => 0,
-			'stats'    => self::get_basic_stats(),
-		);
-	}
-
-	/**
 	 * Get basic activity stats for templates
 	 */
 	private static function get_basic_activity_stats() {

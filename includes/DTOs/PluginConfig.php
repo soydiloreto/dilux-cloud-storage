@@ -135,15 +135,6 @@ class PluginConfig {
 	}
 
 	/**
-	 * Check if HTTPS is enabled
-	 *
-	 * @return bool
-	 */
-	public function isHttpsEnabled(): bool {
-		return $this->settings->isHttpsEnabled();
-	}
-
-	/**
 	 * Get timeout in seconds
 	 *
 	 * @return int

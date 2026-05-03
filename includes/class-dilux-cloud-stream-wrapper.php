@@ -25,6 +25,7 @@
 namespace DiluxWP\CloudStorage;
 
 use DiluxWP\CloudStorage\Enums\PluginState;
+use DiluxWP\CloudStorage\Interfaces\CloudStorageClientInterface;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -44,7 +45,7 @@ class CloudStreamWrapper {
 	/** @var resource Stream context (set by PHP automatically for stream wrappers) */
 	public $context;
 
-	/** @var resource Current file handle */
+	/** @var resource|false|null Current file handle (null before stream_open, false on fopen failure, resource otherwise) */
 	private $handle = null;
 
 	/** @var string Current file path */

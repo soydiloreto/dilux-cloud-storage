@@ -45,9 +45,6 @@ class Plugin {
 
 	private static ?Plugin $instance = null;
 
-	/** @var Admin|null Admin instance */
-	private ?Admin $admin = null;
-
 	/** @var SyncManager|null Sync manager instance */
 	private ?SyncManager $sync_manager = null;
 

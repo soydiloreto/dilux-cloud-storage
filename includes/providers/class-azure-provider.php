@@ -59,9 +59,6 @@ class AzureProvider implements CloudStorageClientInterface {
 	private string $endpoint;
 	// NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
 
-	/** @var AzureConfig|null Configuration DTO (internal use) */
-	private ?AzureConfig $config = null;
-
 	/**
 	 * Constructor
 	 *
@@ -79,10 +76,12 @@ class AzureProvider implements CloudStorageClientInterface {
 		// Build endpoint with HTTPS (Azure requirement - always enforced)
 		$this->endpoint = "https://{$this->storage_account}.blob.core.windows.net";
 
-		// Try to create AzureConfig DTO (with validation) for internal use
+		// Validate the config shape via AzureConfig::fromArray() — the DTO
+		// itself is not retained because nothing currently reads from it,
+		// but the constructor still throws on bad data which we log.
 		if ( ! empty( $this->storage_account ) && ! empty( $this->container_name ) && ! empty( $this->access_key ) ) {
 			try {
-				$this->config = AzureConfig::fromArray( $config );
+				AzureConfig::fromArray( $config );
 				Logger::log( '[Dilux AzureProvider] Initialized with account: ' . $this->storage_account, 'info' );
 			} catch ( \InvalidArgumentException $e ) {
 				Logger::log( '[Dilux AzureProvider] Invalid config: ' . $e->getMessage(), 'error' );
