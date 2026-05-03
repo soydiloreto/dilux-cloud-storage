@@ -12,6 +12,30 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Validate tag format (SemVer X.Y.Z, no 'v' prefix)
+        # First-line of defence on what reaches wp.org. Tags must be bare
+        # SemVer (e.g. 1.1.0, 2.0.4) — no 'v' prefix, no pre-release suffixes.
+        # If the maintainer ever fat-fingers a tag (`v1.1.0`, `1.10`,
+        # `1.1.0-beta`, etc.), this fails fast BEFORE any SVN operation.
+        #
+        # This complements the repository tag-protection ruleset (no delete,
+        # no force-update). The format enforcement is here rather than in the
+        # ruleset because the `tag_name_pattern` rule type is not currently
+        # available via the GitHub REST API on this account; a CI check is
+        # the equivalent guard.
+        run: |
+          set -e
+          tag="${GITHUB_REF#refs/tags/}"
+          echo "Tag pushed: ${tag}"
+          if ! [[ "${tag}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '${tag}' does not match the required SemVer format X.Y.Z (no 'v' prefix, no pre-release suffix)."
+            echo "::error::Examples of valid tags: 1.1.0, 2.0.4, 10.0.1"
+            echo "::error::Examples of REJECTED tags: v1.1.0, 1.10, 1.0, 1.0.0-beta, 1.0.0+build.1"
+            echo "::error::To fix: delete this tag locally (git tag -d ${tag}) and on origin (git push --delete origin ${tag}), then re-tag with the correct format."
+            exit 1
+          fi
+          echo "Tag format OK."
+
       - name: Checkout
         uses: actions/checkout@v6
 
