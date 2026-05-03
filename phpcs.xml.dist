@@ -20,12 +20,15 @@
     <exclude-pattern>*.min.js</exclude-pattern>
     <exclude-pattern>*.min.css</exclude-pattern>
 
-    <!-- CLI behaviour -->
+    <!-- CLI behaviour. Cache is intentionally not configured here — PHPCS
+         requires the parent directory to exist before it can write the
+         cache file, which adds friction on fresh clones / cold CI runs.
+         Local devs can pass --cache=.phpcs-cache/cache manually after
+         creating the directory. -->
     <arg value="sp"/>
     <arg name="colors"/>
     <arg name="parallel" value="8"/>
     <arg name="extensions" value="php"/>
-    <arg name="cache" value=".phpcs-cache/cache"/>
 
     <!-- WordPress Coding Standards: Core, Extra, Docs -->
     <rule ref="WordPress"/>
