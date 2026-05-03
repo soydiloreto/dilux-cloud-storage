@@ -60,25 +60,7 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-  # Composer dev dependencies — placeholder for when phpunit, phpstan,
-  # psalm, brain/monkey, etc. land in P2.x and P3.x. Until composer.json
-  # exists, Dependabot silently no-ops on this entry.
-  - package-ecosystem: "composer"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "America/Argentina/Buenos_Aires"
-    open-pull-requests-limit: 3
-    groups:
-      composer-dev:
-        dependency-type: "development"
-        patterns:
-          - "*"
-    labels:
-      - "dependencies"
-      - "composer"
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
+  # Composer entry will be added in PR P2.1 (Unit tests foundation), at the
+  # same time as composer.json itself. Configuring it here without a manifest
+  # produces "no-manifest" errors in the Dependabot dashboard on every weekly
+  # check, which is noise for no benefit until composer.json exists.
