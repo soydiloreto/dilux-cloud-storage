@@ -10,6 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DiluxWP\CloudStorage\ConfigManager;
+
+// Variables populated by Admin::render_tab_content() via extract( $template_data ).
+// Initialise defensively so static analysis sees a definite type and a stray
+// direct include cannot crash on undefined indexes.
+$config = $config ?? array();
 ?>
 
 <div class="dilux-cs-settings">

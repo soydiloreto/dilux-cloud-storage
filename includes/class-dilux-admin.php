@@ -974,6 +974,10 @@ class Admin {
 		// Detect provider type
 		$provider = sanitize_text_field( wp_unslash( $_POST['provider'] ?? 'azure' ) );
 
+		$api_key        = '';
+		$account_name   = '';
+		$container_name = '';
+
 		try {
 			if ( $provider === 'diluxone' ) {
 				$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );

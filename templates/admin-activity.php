@@ -17,6 +17,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use DiluxWP\CloudStorage\ConfigManager;
 
+// Variables populated by Admin::render_tab_content() via extract( $template_data ).
+// Initialise defensively so static analysis sees a definite type and a stray
+// direct include cannot crash on undefined indexes.
+$activity_stats = $activity_stats ?? array();
+$chart_data     = $chart_data ?? array();
+
 // Read-only filter inputs for the activity-log table. The page is reachable
 // only by users with manage_options; these $_GET reads do not change state.
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only filters; no state change.
