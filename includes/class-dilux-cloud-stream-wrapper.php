@@ -551,7 +551,8 @@ class CloudStreamWrapper {
 	 */
 	public function stream_write( $data ) {
 		if ( $this->handle ) {
-			return fwrite( $this->handle, $data );
+			$written = fwrite( $this->handle, $data );
+			return $written === false ? 0 : $written;
 		}
 
 		// Write to content buffer
@@ -766,6 +767,8 @@ class CloudStreamWrapper {
 			return fstat( $this->handle );
 		}
 
+		// No handle (in-memory buffer mode): return a minimal stat-like array.
+		return $this->create_stat( strlen( $this->content ) );
 	}
 
 	/**
@@ -778,7 +781,9 @@ class CloudStreamWrapper {
 			return feof( $this->handle );
 		}
 
-		// For write mode (content buffer)
+		// For write mode (content buffer): we are at EOF when the cursor has
+		// reached the end of the buffered content.
+		return $this->position >= strlen( $this->content );
 	}
 
 	/**
@@ -818,10 +823,12 @@ class CloudStreamWrapper {
 	 */
 	public function stream_tell() {
 		if ( $this->handle ) {
-			return ftell( $this->handle );
+			$pos = ftell( $this->handle );
+			return $pos === false ? 0 : $pos;
 		}
 
-		// For write mode (content buffer)
+		// For write mode (content buffer): the cursor we tracked.
+		return $this->position;
 	}
 
 	/**
