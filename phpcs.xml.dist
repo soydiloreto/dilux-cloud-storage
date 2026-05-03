@@ -38,7 +38,7 @@
                 <element value="DILUX_CS"/>
                 <element value="Dilux"/>
                 <element value="DiluxWP"/>
-            </properties>
+            </property>
         </properties>
     </rule>
 
