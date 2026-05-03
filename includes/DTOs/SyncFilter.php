@@ -25,7 +25,9 @@ class SyncFilter {
 	private string $allowedFileTypes;
 	/** @var int */
 	private int $maxFileSize;
-	/** @var array */
+	/**
+	 * @var array<string, mixed>
+	 */
 	private array $excludedPaths;
 	/** @var bool */
 	private bool $includeHiddenFiles;
@@ -37,7 +39,7 @@ class SyncFilter {
 	 *
 	 * @param string $allowedFileTypes Comma-separated extensions or '*' for all
 	 * @param int    $maxFileSize Maximum file size in bytes (0 = no limit)
-	 * @param array  $excludedPaths Array of paths/patterns to exclude
+	 * @param array<string, mixed>  $excludedPaths Array of paths/patterns to exclude
 	 * @param bool   $includeHiddenFiles Whether to include files starting with '.'
 	 * @param bool   $includeSystemFiles Whether to include system files (.htaccess, index.php, etc.)
 	 *
@@ -64,7 +66,7 @@ class SyncFilter {
 	/**
 	 * Create from configuration array
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 * @return self
 	 */
 	public static function fromConfig( array $config ): self {
@@ -214,7 +216,7 @@ class SyncFilter {
 	/**
 	 * Get excluded paths
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getExcludedPaths(): array {
 		return $this->excludedPaths;
@@ -259,7 +261,7 @@ class SyncFilter {
 	/**
 	 * Convert to array
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(

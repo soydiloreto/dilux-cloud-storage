@@ -26,7 +26,7 @@ class CloudStorageFactory {
 	 * Create cloud storage client instance
 	 *
 	 * @param string $provider Provider name (azure, aws, etc.)
-	 * @param array  $config Configuration array
+	 * @param array<string, mixed>  $config Configuration array
 	 * @return CloudStorageClientInterface|null
 	 * @throws \Exception When the provider name is not supported or not yet implemented.
 	 */
@@ -54,7 +54,7 @@ class CloudStorageFactory {
 	/**
 	 * Get list of supported providers
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function get_supported_providers() {
 		return array(
@@ -111,7 +111,7 @@ class CloudStorageFactory {
 	 * Get provider configuration fields
 	 *
 	 * @param string $provider
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function get_provider_config_fields( $provider ) {
 		$providers = self::get_supported_providers();

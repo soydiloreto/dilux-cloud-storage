@@ -48,7 +48,7 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	/**
 	 * Temporary files to cleanup on destruct
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected $temp_files_to_cleanup = array();
 
@@ -106,7 +106,7 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	 * @param resource|GdImage $image GD image resource
 	 * @param string           $filename Output filename
 	 * @param string           $mime_type Output mime type
-	 * @return array|WP_Error Saved file info or error
+	 * @return array<string, mixed>|WP_Error Saved file info or error
 	 */
 	protected function _save( $image, $filename = null, $mime_type = null ) {
 		list($filename, $extension, $mime_type) = $this->get_output_format( $filename, $mime_type );

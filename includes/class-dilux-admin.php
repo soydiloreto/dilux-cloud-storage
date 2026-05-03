@@ -177,7 +177,7 @@ class Admin {
 	 * contract and hardens anything submitted directly through it.
 	 *
 	 * @param mixed $value
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function sanitize_settings_option( $value ): array {
 		if ( ! is_array( $value ) ) {
@@ -612,7 +612,7 @@ class Admin {
 	/**
 	 * Render the connection health error banner.
 	 *
-	 * @param array $health Connection health data from ConfigManager
+	 * @param array<string, mixed> $health Connection health data from ConfigManager
 	 */
 	private static function render_connection_health_banner( array $health ): void {
 		$current_state = ConfigManager::get_state();

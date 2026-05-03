@@ -23,14 +23,16 @@ class ProviderConfig {
 
 	/** @var string */
 	private string $cloudProvider;
-	/** @var array */
+	/**
+	 * @var array<string, mixed>
+	 */
 	private array $providerConfig;
 
 	/**
 	 * Constructor
 	 *
 	 * @param string $cloudProvider Provider name (azure, aws, gcp)
-	 * @param array  $providerConfig Provider-specific configuration
+	 * @param array<string, mixed>  $providerConfig Provider-specific configuration
 	 */
 	public function __construct(
 		string $cloudProvider = '',
@@ -43,7 +45,7 @@ class ProviderConfig {
 	/**
 	 * Create from array configuration
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 * @return self
 	 */
 	public static function fromArray( array $config ): self {
@@ -56,7 +58,7 @@ class ProviderConfig {
 	/**
 	 * Create from POST data
 	 *
-	 * @param array $post POST data from form
+	 * @param array<string, mixed> $post POST data from form
 	 * @return self
 	 * @throws \InvalidArgumentException When required POST fields are missing or invalid.
 	 */
@@ -130,7 +132,7 @@ class ProviderConfig {
 	/**
 	 * Get provider-specific configuration
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getProviderConfig(): array {
 		// NOTE: use_https enforcement removed - HTTPS is now hardcoded in provider
@@ -176,7 +178,7 @@ class ProviderConfig {
 	/**
 	 * Convert to array format
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(
@@ -188,7 +190,7 @@ class ProviderConfig {
 	/**
 	 * Merge with another provider config (update fields)
 	 *
-	 * @param array $updates Array of fields to update
+	 * @param array<string, mixed> $updates Array of fields to update
 	 * @return self New instance with updated fields
 	 */
 	public function merge( array $updates ): self {

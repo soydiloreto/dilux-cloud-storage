@@ -44,7 +44,7 @@ class PluginConfig {
 	/**
 	 * Create from array configuration
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 * @return self
 	 */
 	public static function fromArray( array $config ): self {
@@ -88,7 +88,7 @@ class PluginConfig {
 	/**
 	 * Get provider-specific configuration
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getProviderConfig(): array {
 		return $this->provider->getProviderConfig();
@@ -186,7 +186,7 @@ class PluginConfig {
 	/**
 	 * Convert to array format (merges provider + settings)
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array_merge(

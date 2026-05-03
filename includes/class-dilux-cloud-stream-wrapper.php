@@ -62,10 +62,14 @@ class CloudStreamWrapper {
 	/** @var CloudStorageClientInterface */
 	private static $cloud_client = null;
 
-	/** @var array Statistics cache */
+	/**
+	 * @var array<string, mixed> Statistics cache
+	 */
 	private static $stat_cache = array();
 
-	/** @var array File content cache (like Infinite Uploads) */
+	/**
+	 * @var array<string, mixed> File content cache (like Infinite Uploads)
+	 */
 	private static $file_cache = array();
 
 	/** @var int Maximum file size to cache (32MB like Infinite Uploads) */
@@ -75,7 +79,9 @@ class CloudStreamWrapper {
 	 *  served from). Empty string when the plugin is not configured. */
 	private static ?string $cloud_host_cache = null;
 
-	/** @var array Iterator for directory listing */
+	/**
+	 * @var array<string, mixed> Iterator for directory listing
+	 */
 	private $dir_iterator = null;
 
 	/** @var string Current directory path being read */
@@ -250,8 +256,8 @@ class CloudStreamWrapper {
 	 * Double protection: this method should not be called during plugin/theme/core
 	 * operations due to tear_down() hooks, but we add a path check as extra safety.
 	 *
-	 * @param array $upload_dir
-	 * @return array
+	 * @param array<string, mixed> $upload_dir
+	 * @return array<string, mixed>
 	 */
 	public static function filter_upload_dir( $upload_dir ) {
 		// Extra safety: Skip filtering if path contains 'upgrade' directory
@@ -749,7 +755,7 @@ class CloudStreamWrapper {
 	/**
 	 * Stream wrapper: Get file statistics
 	 *
-	 * @return array|false
+	 * @return array<string, mixed>|false
 	 */
 	public function stream_stat() {
 		if ( $this->handle ) {
@@ -842,7 +848,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $path
 	 * @param int    $flags
-	 * @return array|false
+	 * @return array<string, mixed>|false
 	 */
 	public function url_stat( $path, $flags ) {
 		$parsed_path = $this->parse_path( $path );
@@ -906,7 +912,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $path
 	 * @param int    $flags
-	 * @return array|false
+	 * @return array<string, mixed>|false
 	 */
 	private function create_stat( $path, $flags ) {
 		$cloud_client = self::get_cloud_client();
@@ -937,7 +943,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $error
 	 * @param int    $flags
-	 * @return bool|array
+	 * @return bool|array<string, mixed>
 	 */
 	private function trigger_error_internal( $error, $flags = null ) {
 		// This is triggered with things like file_exists()
@@ -961,7 +967,7 @@ class CloudStreamWrapper {
 	 * Prepare a url_stat result array (copied from Infinite Uploads)
 	 *
 	 * @param mixed $result
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	private function format_url_stat( $result = null ) {
 		$stat = array(

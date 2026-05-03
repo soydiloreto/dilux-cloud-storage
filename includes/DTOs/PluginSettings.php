@@ -79,7 +79,7 @@ class PluginSettings {
 	/**
 	 * Create from array configuration
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 * @return self
 	 */
 	public static function fromArray( array $config ): self {
@@ -97,7 +97,7 @@ class PluginSettings {
 	/**
 	 * Create from POST data
 	 *
-	 * @param array $post POST data from form
+	 * @param array<string, mixed> $post POST data from form
 	 * @return self
 	 */
 	public static function fromPost( array $post ): self {
@@ -189,7 +189,7 @@ class PluginSettings {
 	/**
 	 * Convert to array format
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(
@@ -207,7 +207,7 @@ class PluginSettings {
 	/**
 	 * Merge with updates (create new instance with updated fields)
 	 *
-	 * @param array $updates Array of fields to update
+	 * @param array<string, mixed> $updates Array of fields to update
 	 * @return self New instance with updated fields
 	 */
 	public function merge( array $updates ): self {

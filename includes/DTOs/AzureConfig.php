@@ -59,7 +59,7 @@ class AzureConfig {
 	/**
 	 * Create from array configuration
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 * @return self
 	 * @throws \InvalidArgumentException When the array is missing required keys or values are invalid.
 	 */
@@ -110,7 +110,7 @@ class AzureConfig {
 	/**
 	 * Convert to array format
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(

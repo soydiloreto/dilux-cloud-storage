@@ -37,9 +37,13 @@ class SyncResult {
 	private int $skippedFiles;
 	/** @var int */
 	private int $duration;
-	/** @var array */
+	/**
+	 * @var array<string, mixed>
+	 */
 	private array $errors;
-	/** @var array */
+	/**
+	 * @var array<string, mixed>
+	 */
 	private array $statistics;
 
 	/**
@@ -52,8 +56,8 @@ class SyncResult {
 	 * @param int    $failedUploads
 	 * @param int    $skippedFiles
 	 * @param int    $duration
-	 * @param array  $errors
-	 * @param array  $statistics
+	 * @param array<string, mixed>  $errors
+	 * @param array<string, mixed>  $statistics
 	 */
 	public function __construct(
 		bool $success,
@@ -83,7 +87,7 @@ class SyncResult {
 	 * @param int   $totalFiles
 	 * @param int   $successfulUploads
 	 * @param int   $duration
-	 * @param array $statistics
+	 * @param array<string, mixed> $statistics
 	 * @return self
 	 */
 	public static function success( int $totalFiles, int $successfulUploads, int $duration = 0, array $statistics = array() ): self {
@@ -222,7 +226,7 @@ class SyncResult {
 	/**
 	 * Get errors
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getErrors(): array {
 		return $this->errors;
@@ -231,7 +235,7 @@ class SyncResult {
 	/**
 	 * Get statistics
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getStatistics(): array {
 		return $this->statistics;
@@ -290,7 +294,7 @@ class SyncResult {
 	/**
 	 * Convert to array
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(

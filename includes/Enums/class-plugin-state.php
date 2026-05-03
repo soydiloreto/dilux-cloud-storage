@@ -31,7 +31,7 @@ class PluginState {
 	/**
 	 * Get all available states
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function get_all_states() {
 		return array(

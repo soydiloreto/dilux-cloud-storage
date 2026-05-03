@@ -71,7 +71,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	/**
 	 * Constructor
 	 *
-	 * @param array $config Configuration array with 'api_key' and optional 'cdn_base_url'
+	 * @param array<string, mixed> $config Configuration array with 'api_key' and optional 'cdn_base_url'
 	 */
 	public function __construct( array $config = array() ) {
 		$this->api_key      = $config['api_key'] ?? '';
@@ -223,7 +223,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	/**
 	 * Test connection to DiluxOne API
 	 *
-	 * @return array ['success' => bool, 'message' => string]
+	 * @return array<string, mixed> ['success' => bool, 'message' => string]
 	 */
 	public function test_connection(): array {
 		try {
@@ -293,7 +293,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 * This method is specific to DiluxOne (not in CloudStorageClientInterface).
 	 *
 	 * @param bool $force_refresh Skip transient cache and fetch fresh data
-	 * @return array{success: bool, data?: array, message?: string}
+	 * @return array<string, mixed>{success: bool, data?: array, message?: string}
 	 */
 	public function get_stats( bool $force_refresh = false ): array {
 		if ( ! $force_refresh ) {
@@ -362,8 +362,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $local_path Local file path
 	 * @param string $remote_path Remote path in cloud
-	 * @param array  $options Additional options
-	 * @return array ['success' => bool, 'url' => string, 'error' => string]
+	 * @param array<string, mixed>  $options Additional options
+	 * @return array<string, mixed> ['success' => bool, 'url' => string, 'error' => string]
 	 */
 	public function upload_file( string $local_path, string $remote_path, array $options = array() ): array {
 		return $this->execute_with_retry(
@@ -453,7 +453,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $remote_path Remote path in cloud
 	 * @param string $local_path Local destination path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function download_file( string $remote_path, string $local_path ): array {
 		return $this->execute_with_retry(
@@ -623,7 +623,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 * Get file information from Azure Blob Storage
 	 *
 	 * @param string $remote_path Remote path
-	 * @return array|false ['size' => int, 'md5' => string, 'last_modified' => string] or false
+	 * @return array<string, mixed>|false ['size' => int, 'md5' => string, 'last_modified' => string] or false
 	 */
 	public function get_file_info( string $remote_path ) {
 		try {
@@ -685,7 +685,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 * Delete file from Azure Blob Storage via SAS token
 	 *
 	 * @param string $remote_path Remote path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function delete_file( string $remote_path ): array {
 		return $this->execute_with_retry(
@@ -744,7 +744,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $source_path Source blob path
 	 * @param string $dest_path Destination blob path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function copy_blob( string $source_path, string $dest_path ): array {
 		return $this->execute_with_retry(
@@ -807,7 +807,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 * List files in Azure Blob Storage
 	 *
 	 * @param string $remote_path Prefix filter (default: 'uploads/')
-	 * @return array Array of file info arrays
+	 * @return array<string, mixed> Array of file info arrays
 	 *
 	 * @throws \Exception When the Dilux One / Azure REST call fails after all retries.
 	 */
@@ -928,8 +928,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	/**
 	 * Prepare batch upload handle for parallel sync (curl_multi)
 	 *
-	 * @param array $file_info ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_batch_upload_handle( array $file_info ): array {
 		$local_path  = $file_info['local_path'];
@@ -998,8 +998,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	 * Prepare chunked upload handle for large files (>10MB)
 	 * Uses Azure Put Block + Put Block List with SAS token
 	 *
-	 * @param array $file_info ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_chunked_upload_handle( array $file_info ): array {
 		$local_path  = $file_info['local_path'];
@@ -1125,8 +1125,8 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 	/**
 	 * Prepare download handle for parallel downloads (reverse sync)
 	 *
-	 * @param array $file_info ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_download_handle( array $file_info ): array {
 		$remote_path = $file_info['remote_path'];

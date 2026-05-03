@@ -318,7 +318,7 @@ class DiluxDB {
 	 *
 	 * @param int      $limit Max number of files
 	 * @param int|null $max_bytes Max total bytes (for batching)
-	 * @return array Files to upload
+	 * @return array<string, mixed> Files to upload
 	 */
 	public static function get_pending_files( $limit = 1000, $max_bytes = null ) {
 		global $wpdb;
@@ -580,7 +580,7 @@ class DiluxDB {
 	/**
 	 * Add multiple cloud-only files in batch
 	 *
-	 * @param array $files Array of ['path' => string, 'size' => int]
+	 * @param array<string, mixed> $files Array of ['path' => string, 'size' => int]
 	 */
 	public static function add_cloud_only_files_batch( $files ) {
 		global $wpdb;
@@ -626,7 +626,7 @@ class DiluxDB {
 	 * These are files that need to be downloaded during disconnect
 	 *
 	 * @param int $limit Max number of files
-	 * @return array Files to download
+	 * @return array<string, mixed> Files to download
 	 */
 	public static function get_deleted_files( $limit = 1000 ) {
 		global $wpdb;

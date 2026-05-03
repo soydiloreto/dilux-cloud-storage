@@ -30,7 +30,7 @@ class DiluxValidationHelper {
 	 *
 	 * @param string $requesting_session_id ID de sesión del tab que solicita
 	 * @param string $operation_type Tipo de operación: 'start_sync', 'retry_failed', 'clear_and_enable', 'enable_offloading', 'disconnect', 'cancel_sync'
-	 * @return array ['passed' => bool, 'reason' => string, 'details' => array]
+	 * @return array<string, mixed> ['passed' => bool, 'reason' => string, 'details' => array]
 	 */
 	public static function validate_sync_operation( $requesting_session_id, $operation_type ) {
 		Logger::debug( '[Dilux Validation] Validating operation: ' . $operation_type . ' from session: ' . $requesting_session_id );

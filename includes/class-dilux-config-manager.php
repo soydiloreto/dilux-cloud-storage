@@ -130,7 +130,7 @@ class ConfigManager {
 	/**
 	 * Get plugin configuration as array (public API)
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function get_config() {
 		$plugin_config = self::get_plugin_config_dto();
@@ -161,8 +161,8 @@ class ConfigManager {
 	 * Encrypt sensitive credentials inside a config array before persisting.
 	 * Idempotent — already-encrypted values are left untouched.
 	 *
-	 * @param array $config
-	 * @return array
+	 * @param array<string, mixed> $config
+	 * @return array<string, mixed>
 	 */
 	private static function encrypt_credentials( array $config ): array {
 		if ( empty( $config['provider_config'] ) || ! is_array( $config['provider_config'] ) ) {
@@ -190,8 +190,8 @@ class ConfigManager {
 	 * unconfigured and must re-enter the credential. There is intentionally
 	 * no fallback to plaintext.
 	 *
-	 * @param array $config
-	 * @return array
+	 * @param array<string, mixed> $config
+	 * @return array<string, mixed>
 	 */
 	private static function decrypt_credentials( array $config ): array {
 		if ( empty( $config['provider_config'] ) || ! is_array( $config['provider_config'] ) ) {
@@ -244,7 +244,7 @@ class ConfigManager {
 	/**
 	 * Get current provider configuration
 	 *
-	 * @return array Provider-specific configuration
+	 * @return array<string, mixed> Provider-specific configuration
 	 */
 	public static function get_current_provider_config() {
 		$plugin_config = self::get_plugin_config_dto();
@@ -255,7 +255,7 @@ class ConfigManager {
 	 * Save plugin configuration
 	 * Uses autoload=true because config is needed on every request (stream wrapper)
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 * @return bool
 	 */
 	public static function save_config( $config ) {
@@ -302,7 +302,7 @@ class ConfigManager {
 	/**
 	 * Get provider configuration (credentials only)
 	 *
-	 * @return array Provider configuration array
+	 * @return array<string, mixed> Provider configuration array
 	 */
 	public static function get_provider_config() {
 		$plugin_config = self::get_plugin_config_dto();
@@ -312,7 +312,7 @@ class ConfigManager {
 	/**
 	 * Get plugin settings (non-provider settings only)
 	 *
-	 * @return array Plugin settings array
+	 * @return array<string, mixed> Plugin settings array
 	 */
 	public static function get_plugin_settings() {
 		$plugin_config = self::get_plugin_config_dto();
@@ -322,7 +322,7 @@ class ConfigManager {
 	/**
 	 * Save provider configuration (preserves existing settings)
 	 *
-	 * @param ProviderConfig|array $provider_config ProviderConfig DTO or array
+	 * @param ProviderConfig|array<string, mixed> $provider_config ProviderConfig DTO or array
 	 * @return bool
 	 */
 	public static function save_provider_config( $provider_config ) {
@@ -373,7 +373,7 @@ class ConfigManager {
 	/**
 	 * Save plugin settings (preserves existing provider config)
 	 *
-	 * @param PluginSettings|array $settings PluginSettings DTO or array
+	 * @param PluginSettings|array<string, mixed> $settings PluginSettings DTO or array
 	 * @return bool
 	 */
 	public static function save_plugin_settings( $settings ) {
@@ -499,7 +499,7 @@ class ConfigManager {
 	/**
 	 * Test cloud connection
 	 *
-	 * @return array ['success' => bool, 'message' => string]
+	 * @return array<string, mixed> ['success' => bool, 'message' => string]
 	 */
 	public static function test_connection() {
 		$client = self::get_cloud_client();
@@ -518,7 +518,7 @@ class ConfigManager {
 	 * Get sync progress metadata
 	 * Uses autoload=false (large, temporary operational data)
 	 *
-	 * @return array|null
+	 * @return array<string, mixed>|null
 	 */
 	public static function get_sync_progress() {
 		return get_option( self::SYNC_META_OPTION, null );
@@ -528,7 +528,7 @@ class ConfigManager {
 	 * Save sync progress metadata
 	 * Uses autoload=false (changes constantly during sync)
 	 *
-	 * @param array $progress
+	 * @param array<string, mixed> $progress
 	 * @return bool
 	 */
 	public static function save_sync_progress( $progress ) {
@@ -547,7 +547,7 @@ class ConfigManager {
 	/**
 	 * Get failed files (persistent across syncs)
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function get_failed_files() {
 		return get_option( self::FAILED_FILES_OPTION, array() );
@@ -556,7 +556,7 @@ class ConfigManager {
 	/**
 	 * Save failed files (persistent)
 	 *
-	 * @param array $failed_files
+	 * @param array<string, mixed> $failed_files
 	 * @return bool
 	 */
 	public static function save_failed_files( $failed_files ) {
@@ -566,7 +566,7 @@ class ConfigManager {
 	/**
 	 * Add failed files to persistent list
 	 *
-	 * @param array $new_failed_files
+	 * @param array<string, mixed> $new_failed_files
 	 * @return bool
 	 */
 	public static function add_failed_files( $new_failed_files ) {
@@ -634,8 +634,8 @@ class ConfigManager {
 	/**
 	 * Validate configuration
 	 *
-	 * @param array $config
-	 * @return array ['valid' => bool, 'error' => string]
+	 * @param array<string, mixed> $config
+	 * @return array<string, mixed> ['valid' => bool, 'error' => string]
 	 */
 	private static function validate_config( $config ) {
 		// Check cloud provider
@@ -666,7 +666,7 @@ class ConfigManager {
 	 * Validate provider-specific configuration
 	 *
 	 * @param string $provider
-	 * @param array  $provider_config
+	 * @param array<string, mixed>  $provider_config
 	 * @return bool
 	 */
 	private static function validate_provider_config( $provider, $provider_config ) {
@@ -684,7 +684,7 @@ class ConfigManager {
 	/**
 	 * Update plugin state based on configuration
 	 *
-	 * @param array $config
+	 * @param array<string, mixed> $config
 	 */
 	private static function update_state_from_config( $config ): void {
 		$current_state = self::get_state();
@@ -773,7 +773,7 @@ class ConfigManager {
 	/**
 	 * Get connection health status from wp_options.
 	 *
-	 * @return array Connection health data
+	 * @return array<string, mixed> Connection health data
 	 */
 	public static function get_connection_health(): array {
 		$health = get_option( self::HEALTH_OPTION, self::DEFAULT_HEALTH );
@@ -784,7 +784,7 @@ class ConfigManager {
 	 * Check connection health with 5-minute TTL cache.
 	 * Performs actual test_connection() if stale.
 	 *
-	 * @return array Connection health data
+	 * @return array<string, mixed> Connection health data
 	 */
 	public static function check_connection_health(): array {
 		$health = self::get_connection_health();

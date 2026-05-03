@@ -208,7 +208,7 @@ class SyncManager {
 	 * Scan local files and populate DB (without starting sync)
 	 * Used for calculating files before showing confirmation popup
 	 *
-	 * @return array Result with success status and total_files count
+	 * @return array<string, mixed> Result with success status and total_files count
 	 */
 	public function scan_local_files() {
 		if ( ! $this->cloud_client ) {
@@ -447,7 +447,7 @@ class SyncManager {
 	 * ⭐ NEW: Uses custom DB table + time-based approach (Infinite Uploads style)
 	 *
 	 * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
-	 * @return array Progress information
+	 * @return array<string, mixed> Progress information
 	 */
 	public function process_batch( $time_limit = 8.0 ) {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -593,7 +593,7 @@ class SyncManager {
 	 * Get current sync progress
 	 * ⭐ NEW: Uses custom DB table for stats
 	 *
-	 * @return array|null
+	 * @return array<string, mixed>|null
 	 */
 	public function get_progress() {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -724,7 +724,7 @@ class SyncManager {
 	 * Scan uploads directory for files to sync
 	 *
 	 * @param bool $initial_sync Whether this is an initial sync (optimizes MD5 calculation)
-	 * @return array Array of file information
+	 * @return array<string, mixed> Array of file information
 	 */
 	public function scan_files_to_sync( $initial_sync = false ) {
 		$files          = array();
@@ -857,8 +857,8 @@ class SyncManager {
 	 *
 	 * PERFORMANCE BOOST: 10x faster than sequential uploads
 	 *
-	 * @param array $batch Array of file_info arrays
-	 * @return array Array of results ['success' => bool, 'error' => string]
+	 * @param array<string, mixed> $batch Array of file_info arrays
+	 * @return array<string, mixed> Array of results ['success' => bool, 'error' => string]
 	 */
 	private function sync_files_parallel( $batch ) {
 		$results = array();
@@ -876,8 +876,8 @@ class SyncManager {
 	 * Upload a chunk of files in parallel using cURL Multi
 	 * OPTIMIZED: Properly manages file handles for streaming
 	 *
-	 * @param array $files Array of file_info arrays (max $parallel_uploads files)
-	 * @return array Array of results
+	 * @param array<string, mixed> $files Array of file_info arrays (max $parallel_uploads files)
+	 * @return array<string, mixed> Array of results
 	 */
 	private function upload_chunk_parallel( $files ) {
 		$mh           = curl_multi_init();
@@ -985,8 +985,8 @@ class SyncManager {
 	 * Prepare upload handle (delegates to provider)
 	 * Provider-agnostic method that delegates to cloud storage provider
 	 *
-	 * @param array $file_info File information
-	 * @return array Upload handle data
+	 * @param array<string, mixed> $file_info File information
+	 * @return array<string, mixed> Upload handle data
 	 */
 	private function prepare_upload_handle( $file_info ) {
 		$local_path = $file_info['local_path'];
@@ -1013,8 +1013,8 @@ class SyncManager {
 	/**
 	 * ⭐ NEW: Download files in parallel (same pattern as upload)
 	 *
-	 * @param array $batch Array of file_info arrays
-	 * @return array Array of results
+	 * @param array<string, mixed> $batch Array of file_info arrays
+	 * @return array<string, mixed> Array of results
 	 */
 	private function download_files_parallel( $batch ) {
 		$results = array();
@@ -1031,8 +1031,8 @@ class SyncManager {
 	/**
 	 * ⭐ NEW: Download a chunk of files in parallel using cURL Multi
 	 *
-	 * @param array $files Array of file_info arrays (max $parallel_uploads files)
-	 * @return array Array of results
+	 * @param array<string, mixed> $files Array of file_info arrays (max $parallel_uploads files)
+	 * @return array<string, mixed> Array of results
 	 */
 	private function download_chunk_parallel( $files ) {
 		Logger::info( '[Dilux SyncManager] 🚀 Downloading chunk of ' . count( $files ) . ' files in parallel (concurrency=' . $this->parallel_uploads . ')' );
@@ -1106,8 +1106,8 @@ class SyncManager {
 	 * Prepare a cURL handle for downloading a file from cloud storage
 	 * Delegates to cloud provider implementation
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	private function prepare_download_handle( $file_info ) {
 		// Delegate to cloud provider (Azure, AWS, GCP, etc.)
@@ -1172,7 +1172,7 @@ class SyncManager {
 	 * This should be called AFTER upload sync completes
 	 * Note: Cloud provider list_files() should return all files at once
 	 *
-	 * @return array ['success' => bool, 'cloud_files_found' => int, 'cloud_only_files' => int]
+	 * @return array<string, mixed> ['success' => bool, 'cloud_files_found' => int, 'cloud_only_files' => int]
 	 */
 	public function compare_with_cloud() {
 		if ( ! $this->cloud_client ) {
@@ -1241,7 +1241,7 @@ class SyncManager {
 	 * Used when disconnecting from cloud provider
 	 *
 	 * @param string $mode 'continue' (smart, only missing) or 'scratch' (re-download all)
-	 * @return array ['success' => bool, 'message' => string, 'total_files' => int]
+	 * @return array<string, mixed> ['success' => bool, 'message' => string, 'total_files' => int]
 	 */
 	public function start_reverse_sync( $mode = 'continue' ) {
 		$current_state = ConfigManager::get_state();
@@ -1426,7 +1426,7 @@ class SyncManager {
 	 * ⭐ OPTIMIZED: Uses dynamic batch_size like normal sync
 	 *
 	 * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
-	 * @return array Progress information
+	 * @return array<string, mixed> Progress information
 	 */
 	public function process_reverse_batch( $time_limit = 8.0 ) {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -1607,8 +1607,8 @@ class SyncManager {
 	 * timestamps, then writes it back via ConfigManager. Caller decides
 	 * what to do with the returned progress envelope.
 	 *
-	 * @param array $progress Current progress envelope to finalize.
-	 * @return array Updated progress envelope with status='completed'.
+	 * @param array<string, mixed> $progress Current progress envelope to finalize.
+	 * @return array<string, mixed> Updated progress envelope with status='completed'.
 	 */
 	private function complete_sync( $progress ) {
 		$progress['status']       = 'completed';

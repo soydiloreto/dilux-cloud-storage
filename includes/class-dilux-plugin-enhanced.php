@@ -187,8 +187,8 @@ class Plugin {
 	 * Our custom editors handle diluxcloud:// paths by using temp files.
 	 * This allows WordPress to generate thumbnails even when offloading is active.
 	 *
-	 * @param array $editors Array of image editor class names
-	 * @return array Modified array with our custom editors first
+	 * @param array<string, mixed> $editors Array of image editor class names
+	 * @return array<string, mixed> Modified array with our custom editors first
 	 */
 	public function filter_image_editors( array $editors ): array {
 		// Remove default Imagick if present
