@@ -1,0 +1,128 @@
+<?php
+/**
+ * PHPUnit bootstrap for integration tests.
+ *
+ * Loads WordPress core with the plugin already activated and ensures
+ * the plugin's custom DB table exists. Runs inside the wp-env "tests"
+ * Docker container, where:
+ *
+ * - WordPress core lives at  /var/www/html/
+ * - This plugin is mounted at /var/www/html/wp-content/plugins/dilux-cloud-storage/
+ * - Composer vendor/ ships from the host repo via the same mount.
+ * - The MySQL database for tests is named `tests-wordpress` (wp-env default).
+ *
+ * Outside of the container, this file MUST NOT be required — the
+ * /var/www/html paths do not exist on the host. The CI workflow
+ * (tests-integration.yml) invokes phpunit via `npx wp-env run tests-cli`
+ * specifically for that reason.
+ */
+
+// 0. Prevent WordPress from sending headers / loading themes during bootstrap.
+define('WP_USE_THEMES', false);
+
+// 1. Simulate admin AJAX context so handlers register and wp_die is interceptable.
+if (!defined('WP_ADMIN')) {
+    define('WP_ADMIN', true);
+}
+if (!defined('DOING_AJAX')) {
+    define('DOING_AJAX', true);
+}
+$_SERVER['PHP_SELF'] = '/wp-admin/admin-ajax.php';
+
+// 2. Set HTTP_HOST etc. to prevent "Undefined array key" warnings under CLI.
+if (empty($_SERVER['HTTP_HOST'])) {
+    $_SERVER['HTTP_HOST'] = getenv('HTTP_HOST') ?: 'tests.local';
+}
+if (empty($_SERVER['SERVER_NAME'])) {
+    $_SERVER['SERVER_NAME'] = $_SERVER['HTTP_HOST'];
+}
+if (empty($_SERVER['REQUEST_URI'])) {
+    $_SERVER['REQUEST_URI'] = '/';
+}
+
+// 3. Resolve the plugin directory inside the container. wp-env mounts the
+//    repo at /var/www/html/wp-content/plugins/<slug>/. We derive the slug
+//    dynamically rather than hardcoding it.
+$plugin_dir_in_container = '/var/www/html/wp-content/plugins/dilux-cloud-storage';
+
+// 4. Load WordPress (this loads the plugin since it's activated).
+$wp_load = '/var/www/html/wp-load.php';
+if (!file_exists($wp_load)) {
+    fwrite(STDERR, "ERROR: wp-load.php not found at {$wp_load}\n");
+    fwrite(STDERR, "Integration tests must run inside the wp-env tests container.\n");
+    fwrite(STDERR, "Use: npx wp-env run tests-cli ./vendor/bin/phpunit -c phpunit-integration.xml\n");
+    exit(1);
+}
+require_once $wp_load;
+
+// 5. Verify we're talking to the test database. wp-env names it
+//    "tests-wordpress" by default. The substring check is the safety net
+//    against accidentally running integration tests against a real database.
+global $wpdb;
+$db_name = $wpdb->dbname;
+if (strpos($db_name, 'test') === false) {
+    fwrite(STDERR, "SAFETY CHECK FAILED: database '{$db_name}' does not contain 'test'.\n");
+    fwrite(STDERR, "Integration tests MUST run on a test database. Aborting.\n");
+    exit(1);
+}
+
+// 6. Composer autoload (PHPUnit, Brain Monkey, Mockery, Tests\ namespace).
+//    The vendor/ tree comes from the host's `composer install`, mounted
+//    into the container via the plugin's volume.
+$composer_autoload = $plugin_dir_in_container . '/vendor/autoload.php';
+if (!file_exists($composer_autoload)) {
+    fwrite(STDERR, "ERROR: composer autoload not found at {$composer_autoload}.\n");
+    fwrite(STDERR, "Run `composer install` on the host before invoking integration tests.\n");
+    exit(1);
+}
+require_once $composer_autoload;
+
+// 7. Verify the plugin loaded.
+if (!defined('DILUX_CS_PLUGIN_DIR')) {
+    fwrite(STDERR, "ERROR: dilux-cloud-storage plugin is not activated in the tests environment.\n");
+    fwrite(STDERR, "Run: npx wp-env run tests-cli wp plugin activate dilux-cloud-storage\n");
+    exit(1);
+}
+
+// 8. Force-load DiluxDB (the plugin's normal flow loads it via require_once
+//    inside its bootstrap; making it explicit here ensures it's present
+//    before any test method runs, regardless of plugin load order).
+require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
+
+// 9. Ensure the plugin's custom table exists in the tests database.
+\DiluxWP\CloudStorage\DiluxDB::create_files_table();
+
+// 10. Mark integration test context — useful inside plugin code that wants
+//     to bypass certain side effects (sending real HTTP, registering cron,
+//     etc.) when DILUX_INTEGRATION_TESTS is defined.
+if (!defined('DILUX_INTEGRATION_TESTS')) {
+    define('DILUX_INTEGRATION_TESTS', true);
+}
+
+// 11. Override wp_die handlers globally so AJAX handlers throw an
+//     exception instead of terminating the PHPUnit process. Tests that
+//     expect wp_die catch WPAjaxDieContinueException.
+class WPAjaxDieContinueException extends \Exception {}
+
+$_dilux_wp_die_test_handler = function ($message, $title = '', $args = []) {
+    if (function_exists('is_wp_error') && is_wp_error($message)) {
+        $message = $message->get_error_message();
+    }
+    throw new WPAjaxDieContinueException((string) $message);
+};
+
+add_filter('wp_die_ajax_handler', function () use ($_dilux_wp_die_test_handler) {
+    return $_dilux_wp_die_test_handler;
+}, 999);
+
+add_filter('wp_die_handler', function () use ($_dilux_wp_die_test_handler) {
+    return $_dilux_wp_die_test_handler;
+}, 999);
+
+// 12. Confirmation banner (shows in CI logs).
+echo "Integration test bootstrap loaded.\n";
+echo "  Database:    {$db_name}\n";
+echo "  Prefix:      {$wpdb->prefix}\n";
+echo "  Plugin DB:   " . \DiluxWP\CloudStorage\DiluxDB::get_table_name() . "\n";
+echo "  WP version:  " . get_bloginfo('version') . "\n";
+echo "  Plugin ver:  " . DILUX_CS_VERSION . "\n";
