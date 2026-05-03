@@ -71,7 +71,8 @@ class DiluxValidationHelper {
 				'disconnect',
 				'prepare_resync',
 				'cancel_sync', // ⭐ Reset Sync también necesita validación multi-tab
-			)
+			),
+			true
 		);
 	}
 
@@ -97,7 +98,7 @@ class DiluxValidationHelper {
 
 		// Check si sync está terminada (completed, failed, completed_with_errors)
 		// ⭐ FIX: Mover este check ANTES del timeout para evitar limpiar sync completadas
-		if ( in_array( $status, array( 'completed', 'completed_with_errors', 'failed' ) ) ) {
+		if ( in_array( $status, array( 'completed', 'completed_with_errors', 'failed' ), true ) ) {
 			// Sync terminada → OK
 			// No limpiar aquí, activate_offloading() se encarga de limpiar
 			return array(

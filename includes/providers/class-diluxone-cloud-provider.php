@@ -822,10 +822,10 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 						do {
 							$params = 'restype=container&comp=list';
 							if ( $remote_path ) {
-								$params .= '&prefix=' . urlencode( $remote_path );
+								$params .= '&prefix=' . rawurlencode( $remote_path );
 							}
 							if ( $marker ) {
-								$params .= '&marker=' . urlencode( $marker );
+								$params .= '&marker=' . rawurlencode( $marker );
 							}
 
 							$sas_token = $this->get_or_refresh_sas_token();
@@ -1035,7 +1035,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 				$block_id    = base64_encode( str_pad( $block_index, 6, '0', STR_PAD_LEFT ) );
 				$block_ids[] = $block_id;
 
-				$block_url = $base_url . '?comp=block&blockid=' . urlencode( $block_id ) . '&' . $sas_token;
+				$block_url = $base_url . '?comp=block&blockid=' . rawurlencode( $block_id ) . '&' . $sas_token;
 
 				$ch = curl_init();
 				curl_setopt_array(

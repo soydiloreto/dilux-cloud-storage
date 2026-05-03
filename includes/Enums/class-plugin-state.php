@@ -97,6 +97,6 @@ class PluginState {
 	 * @return bool
 	 */
 	public static function can_disconnect( $state ) {
-		return in_array( $state, array( self::SYNCED, self::OFFLOADING_ACTIVE ) );
+		return in_array( $state, array( self::SYNCED, self::OFFLOADING_ACTIVE ), true );
 	}
 }

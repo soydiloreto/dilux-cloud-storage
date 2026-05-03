@@ -279,7 +279,7 @@ class Admin {
 
 				// Fetch cloud stats for overview display
 				$current_state_ov = ConfigManager::get_state();
-				$is_configured_ov = ! in_array( $current_state_ov, array( 'not_configured', '' ) );
+				$is_configured_ov = ! in_array( $current_state_ov, array( 'not_configured', '' ), true );
 				$cloud_stats_ov   = null;
 
 				if ( $is_configured_ov ) {
@@ -322,7 +322,7 @@ class Admin {
 
 				// Prepare cloud stats and DB data for template (no business logic in templates)
 				$current_state_cp   = ConfigManager::get_state();
-				$is_configured_cp   = ! in_array( $current_state_cp, array( 'not_configured', '' ) );
+				$is_configured_cp   = ! in_array( $current_state_cp, array( 'not_configured', '' ), true );
 				$cloud_stats_cp     = null;
 				$has_files_in_db_cp = false;
 
@@ -840,7 +840,7 @@ class Admin {
 						array(
 							'page'    => 'dilux-cloud-storage',
 							'tab'     => $redirect_tab,
-							'success' => urlencode( 'Settings saved successfully!' ),
+							'success' => rawurlencode( 'Settings saved successfully!' ),
 						),
 						admin_url( 'admin.php' )
 					);
@@ -852,7 +852,7 @@ class Admin {
 					array(
 						'page'  => 'dilux-cloud-storage',
 						'tab'   => $redirect_tab,
-						'error' => urlencode( 'Failed to save settings: ' . $e->getMessage() ),
+						'error' => rawurlencode( 'Failed to save settings: ' . $e->getMessage() ),
 					),
 					admin_url( 'admin.php' )
 				);
@@ -880,7 +880,7 @@ class Admin {
 							array(
 								'page'    => 'dilux-cloud-storage',
 								'tab'     => $redirect_tab,
-								'success' => urlencode( 'Provider configuration saved successfully!' ),
+								'success' => rawurlencode( 'Provider configuration saved successfully!' ),
 							),
 							admin_url( 'admin.php' )
 						);
@@ -893,7 +893,7 @@ class Admin {
 						array(
 							'page'  => 'dilux-cloud-storage',
 							'tab'   => $redirect_tab,
-							'error' => urlencode( $e->getMessage() ),
+							'error' => rawurlencode( $e->getMessage() ),
 						),
 						admin_url( 'admin.php' )
 					);
@@ -902,7 +902,7 @@ class Admin {
 						array(
 							'page'  => 'dilux-cloud-storage',
 							'tab'   => $redirect_tab,
-							'error' => urlencode( 'Failed to save configuration: ' . $e->getMessage() ),
+							'error' => rawurlencode( 'Failed to save configuration: ' . $e->getMessage() ),
 						),
 						admin_url( 'admin.php' )
 					);
@@ -927,7 +927,7 @@ class Admin {
 				array(
 					'page'  => 'dilux-cloud-storage',
 					'tab'   => 'overview',
-					'error' => urlencode( 'Invalid save request' ),
+					'error' => rawurlencode( 'Invalid save request' ),
 				),
 				admin_url( 'admin.php' )
 			);
@@ -1226,7 +1226,7 @@ class Admin {
 				array(
 					'page'    => 'dilux-cloud-storage',
 					'tab'     => 'offloading',
-					'success' => urlencode( 'Offloading configuration saved successfully!' ),
+					'success' => rawurlencode( 'Offloading configuration saved successfully!' ),
 				),
 				admin_url( 'admin.php' )
 			);
@@ -1236,7 +1236,7 @@ class Admin {
 				array(
 					'page'  => 'dilux-cloud-storage',
 					'tab'   => 'offloading',
-					'error' => urlencode( 'Failed to save offloading configuration: ' . $e->getMessage() ),
+					'error' => rawurlencode( 'Failed to save offloading configuration: ' . $e->getMessage() ),
 				),
 				admin_url( 'admin.php' )
 			);
@@ -1392,7 +1392,7 @@ class Admin {
 				array(
 					'page'    => 'dilux-cloud-storage',
 					'tab'     => 'settings',
-					'success' => urlencode( __( 'Cloud storage configuration removed successfully. The plugin has been reset.', 'dilux-cloud-storage' ) ),
+					'success' => rawurlencode( __( 'Cloud storage configuration removed successfully. The plugin has been reset.', 'dilux-cloud-storage' ) ),
 				),
 				admin_url( 'admin.php' )
 			);
@@ -1404,7 +1404,7 @@ class Admin {
 				array(
 					'page'  => 'dilux-cloud-storage',
 					'tab'   => 'settings',
-					'error' => urlencode(
+					'error' => rawurlencode(
 						sprintf(
 						/* translators: %s is the error message. */
 							__( 'Failed to remove configuration: %s', 'dilux-cloud-storage' ),
@@ -1743,7 +1743,7 @@ class Admin {
 
 					// Get final stats before clearing
 					$stats = \DiluxWP\CloudStorage\DiluxDB::get_stats();
-					Logger::info( '[Dilux Admin] Final sync stats: ' . json_encode( $stats ) );
+					Logger::info( '[Dilux Admin] Final sync stats: ' . wp_json_encode( $stats ) );
 
 					// Clear only pending files (keep synced files for history/stats)
 					// Actually, we can keep the table as-is for audit purposes

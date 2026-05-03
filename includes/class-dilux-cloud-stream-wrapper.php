@@ -87,7 +87,7 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public static function register() {
-		if ( in_array( self::PROTOCOL, stream_get_wrappers() ) ) {
+		if ( in_array( self::PROTOCOL, stream_get_wrappers(), true ) ) {
 			stream_wrapper_unregister( self::PROTOCOL );
 		}
 
@@ -127,7 +127,7 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public static function is_active() {
-		return in_array( self::PROTOCOL, stream_get_wrappers() );
+		return in_array( self::PROTOCOL, stream_get_wrappers(), true );
 	}
 
 	/**

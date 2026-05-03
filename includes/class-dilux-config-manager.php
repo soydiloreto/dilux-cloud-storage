@@ -418,7 +418,7 @@ class ConfigManager {
 	 * @return bool
 	 */
 	public static function set_state( $state ) {
-		if ( ! in_array( $state, PluginState::get_all_states() ) ) {
+		if ( ! in_array( $state, PluginState::get_all_states(), true ) ) {
 			Logger::error( '[Dilux ConfigManager] Invalid state: ' . $state );
 			return false;
 		}

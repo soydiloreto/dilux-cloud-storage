@@ -1410,7 +1410,7 @@ class Plugin {
 			}
 
 			// Check if sync is terminated (completed, completed_with_errors, or failed)
-			$is_terminated = in_array( $status, array( 'completed', 'completed_with_errors', 'failed' ) );
+			$is_terminated = in_array( $status, array( 'completed', 'completed_with_errors', 'failed' ), true );
 
 			// Determine state from this tab's perspective
 			if ( $is_terminated ) {

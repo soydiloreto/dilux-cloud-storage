@@ -682,7 +682,7 @@ class SyncManager {
 
 		// Fallback: Also check old architecture (for compatibility)
 		$progress = ConfigManager::get_sync_progress();
-		if ( $progress && in_array( $progress['status'], array( 'started', 'paused' ) ) ) {
+		if ( $progress && in_array( $progress['status'], array( 'started', 'paused' ), true ) ) {
 			ConfigManager::clear_sync_progress();
 			delete_transient( 'dilux_cs_full_file_list' );
 			ConfigManager::set_state( PluginState::CONFIGURED );

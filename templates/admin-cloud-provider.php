@@ -24,7 +24,7 @@ $has_files_in_db = $template_data['has_files_in_db'] ?? false;
 <div class="dilux-cs-settings">
 	<?php
 	// Delete Provider button visible only before offloading is active (disconnect first via Sync tab)
-	$can_delete_provider = in_array( $current_state, array( 'configured', 'syncing', 'synced' ) );
+	$can_delete_provider = in_array( $current_state, array( 'configured', 'syncing', 'synced' ), true );
 
 	// Mask credentials for read-only display
 	$provider_name = $config['cloud_provider'] ?? '';

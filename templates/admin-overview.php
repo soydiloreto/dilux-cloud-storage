@@ -30,7 +30,7 @@ $plugin_state = ConfigManager::get_state();
 // check would diverge here and create the kind of cross-tab inconsistency
 // we are trying to remove.
 $is_configured = ConfigManager::is_configured();
-$is_synced     = in_array( $plugin_state, array( PluginState::SYNCED, PluginState::OFFLOADING_ACTIVE ) );
+$is_synced     = in_array( $plugin_state, array( PluginState::SYNCED, PluginState::OFFLOADING_ACTIVE ), true );
 $is_offloading = $plugin_state === PluginState::OFFLOADING_ACTIVE;
 $cloud_stats   = $cloud_stats ?? null;
 

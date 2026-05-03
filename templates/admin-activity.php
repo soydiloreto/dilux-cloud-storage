@@ -339,7 +339,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 											<?php
 											$metadata = json_decode( $log['metadata'], true );
 											if ( $metadata ) {
-												echo '<pre>' . esc_html( json_encode( $metadata, JSON_PRETTY_PRINT ) ) . '</pre>';
+												echo '<pre>' . esc_html( wp_json_encode( $metadata, JSON_PRETTY_PRINT ) ) . '</pre>';
 											}
 											?>
 										</div>
@@ -399,7 +399,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 <script>
 jQuery(document).ready(function($) {
 	// Chart data (passed from PHP)
-	var chartData = <?php echo json_encode( $chart_data ); ?>;
+	var chartData = <?php echo wp_json_encode( $chart_data ); ?>;
 	
 	// Initialize chart
 	if (typeof Chart !== 'undefined' && document.getElementById('activity-chart')) {

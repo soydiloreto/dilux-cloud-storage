@@ -676,11 +676,11 @@ class AzureProvider implements CloudStorageClientInterface {
 					$url = $this->endpoint . '/' . $this->container_name . '?restype=container&comp=list';
 
 					if ( $prefix ) {
-						$url .= '&prefix=' . urlencode( $prefix );
+						$url .= '&prefix=' . rawurlencode( $prefix );
 					}
 
 					if ( $marker ) {
-						$url .= '&marker=' . urlencode( $marker );
+						$url .= '&marker=' . rawurlencode( $marker );
 					}
 
 					$headers = $this->get_auth_headers( 'GET', $url );
@@ -1019,7 +1019,7 @@ class AzureProvider implements CloudStorageClientInterface {
 				$block_ids[] = $block_id;
 
 				// Upload block
-				$url            = "{$endpoint}/{$this->container_name}/{$encoded_path}?comp=block&blockid=" . urlencode( $block_id );
+				$url            = "{$endpoint}/{$this->container_name}/{$encoded_path}?comp=block&blockid=" . rawurlencode( $block_id );
 				$date           = gmdate( 'D, d M Y H:i:s T' );
 				$content_length = strlen( $chunk );
 
