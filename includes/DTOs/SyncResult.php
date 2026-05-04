@@ -226,7 +226,7 @@ class SyncResult {
 	/**
 	 * Get errors
 	 *
-	 * @return array<string, mixed>
+	 * @return array<int, string>
 	 */
 	public function getErrors(): array {
 		return $this->errors;

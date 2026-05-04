@@ -878,7 +878,7 @@ class SyncManager {
 	 * OPTIMIZED: Properly manages file handles for streaming
 	 *
 	 * @param array<int, array<string, mixed>> $files Array of file_info arrays (max $parallel_uploads files)
-	 * @return array<string, mixed> Array of results
+	 * @return array<int, array<string, mixed>> Array of results
 	 */
 	private function upload_chunk_parallel( $files ) {
 		$mh           = curl_multi_init();
@@ -1034,7 +1034,7 @@ class SyncManager {
 	 * ⭐ NEW: Download a chunk of files in parallel using cURL Multi
 	 *
 	 * @param array<int, array<string, mixed>> $files Array of file_info arrays (max $parallel_uploads files)
-	 * @return array<string, mixed> Array of results
+	 * @return array<int, array<string, mixed>> Array of results
 	 */
 	private function download_chunk_parallel( $files ) {
 		Logger::info( '[Dilux SyncManager] 🚀 Downloading chunk of ' . count( $files ) . ' files in parallel (concurrency=' . $this->parallel_uploads . ')' );

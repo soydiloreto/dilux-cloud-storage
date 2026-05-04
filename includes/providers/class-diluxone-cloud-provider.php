@@ -606,7 +606,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					}
 
 					if ( $http_code === 200 && $response ) {
-						if ( preg_match( '/Content-MD5:\s*(.+)/i', $response, $matches ) ) {
+						if ( preg_match( '/Content-MD5:\s*(.+)/i', (string) $response, $matches ) ) {
 							return trim( $matches[1] );
 						}
 					}
@@ -662,13 +662,14 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					$md5           = null;
 					$last_modified = null;
 
-					if ( preg_match( '/Content-Length:\s*(\d+)/i', $response, $m ) ) {
+					$body_str = (string) $response;
+					if ( preg_match( '/Content-Length:\s*(\d+)/i', $body_str, $m ) ) {
 						$size = (int) $m[1];
 					}
-					if ( preg_match( '/Content-MD5:\s*(.+)/i', $response, $m ) ) {
+					if ( preg_match( '/Content-MD5:\s*(.+)/i', $body_str, $m ) ) {
 						$md5 = trim( $m[1] );
 					}
-					if ( preg_match( '/Last-Modified:\s*(.+)/i', $response, $m ) ) {
+					if ( preg_match( '/Last-Modified:\s*(.+)/i', $body_str, $m ) ) {
 						$last_modified = trim( $m[1] );
 					}
 
