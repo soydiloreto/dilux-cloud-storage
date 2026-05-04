@@ -390,15 +390,15 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 								<span class="dilux-bar-title"><?php esc_html_e( 'Storage', 'dilux-cloud-storage' ); ?></span>
 								<span class="dilux-bar-value" id="stat-storage-detail">
 									<?php if ( $has_storage_limit ) : ?>
-										<?php echo esc_html( sprintf( '%s / %s (%s%%)', size_format( $used_bytes ), size_format( $storage_limit ), $storage_pct ) ); ?>
+										<?php echo esc_html( sprintf( '%s / %s (%s%%)', (string) size_format( $used_bytes ), (string) size_format( $storage_limit ), $storage_pct ) ); ?>
 									<?php else : ?>
-										<?php echo esc_html( size_format( $used_bytes ) ); ?>
+										<?php echo esc_html( (string) size_format( $used_bytes ) ); ?>
 									<?php endif; ?>
 								</span>
 							</div>
 							<?php if ( $has_storage_limit ) : ?>
 							<div class="dilux-stat-bar-container" style="background: <?php echo esc_attr( $storage_colors['bg'] ); ?>;">
-								<div id="stat-storage-bar" class="dilux-stat-bar" style="width: <?php echo esc_attr( min( $storage_pct, 100 ) ); ?>%; background: <?php echo esc_attr( $storage_colors['color'] ); ?>;"></div>
+								<div id="stat-storage-bar" class="dilux-stat-bar" style="width: <?php echo esc_attr( (string) min( $storage_pct, 100 ) ); ?>%; background: <?php echo esc_attr( $storage_colors['color'] ); ?>;"></div>
 							</div>
 							<?php endif; ?>
 						</div>
@@ -410,15 +410,15 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 								<span class="dilux-bar-title"><?php esc_html_e( 'Bandwidth (30 days)', 'dilux-cloud-storage' ); ?></span>
 								<span class="dilux-bar-value" id="stat-bandwidth-detail">
 									<?php if ( $has_bw_limit ) : ?>
-										<?php echo esc_html( sprintf( '%s / %s (%s%%)', size_format( $bw_used ), size_format( $bw_limit ), $bw_pct ) ); ?>
+										<?php echo esc_html( sprintf( '%s / %s (%s%%)', (string) size_format( $bw_used ), (string) size_format( $bw_limit ), $bw_pct ) ); ?>
 									<?php else : ?>
-										<?php echo $bw_used > 0 ? esc_html( size_format( $bw_used ) ) : esc_html__( 'Not available', 'dilux-cloud-storage' ); ?>
+										<?php echo $bw_used > 0 ? esc_html( (string) size_format( $bw_used ) ) : esc_html__( 'Not available', 'dilux-cloud-storage' ); ?>
 									<?php endif; ?>
 								</span>
 							</div>
 							<?php if ( $has_bw_limit ) : ?>
 							<div class="dilux-stat-bar-container" style="background: <?php echo esc_attr( $bw_colors['bg'] ); ?>;">
-								<div id="stat-bandwidth-bar" class="dilux-stat-bar" style="width: <?php echo esc_attr( min( $bw_pct, 100 ) ); ?>%; background: <?php echo esc_attr( $bw_colors['color'] ); ?>;"></div>
+								<div id="stat-bandwidth-bar" class="dilux-stat-bar" style="width: <?php echo esc_attr( (string) min( $bw_pct, 100 ) ); ?>%; background: <?php echo esc_attr( $bw_colors['color'] ); ?>;"></div>
 							</div>
 							<?php endif; ?>
 						</div>
@@ -437,7 +437,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 							<!-- Pie chart (only if filesByType exists from API) -->
 							<?php
 							if ( $files_by_type !== null ) :
-								$total_typed = ( $files_by_type['images'] ?? 0 ) + ( $files_by_type['videos'] ?? 0 ) + ( $files_by_type['audio'] ?? 0 ) + ( $files_by_type['other'] ?? 0 );
+								$total_typed = (int) ( $files_by_type['images'] ?? 0 ) + (int) ( $files_by_type['videos'] ?? 0 ) + (int) ( $files_by_type['audio'] ?? 0 ) + (int) ( $files_by_type['other'] ?? 0 );
 								if ( $total_typed > 0 ) :
 									$pct_images = round( ( $files_by_type['images'] ?? 0 ) / $total_typed * 100, 1 );
 									$pct_videos = round( ( $files_by_type['videos'] ?? 0 ) / $total_typed * 100, 1 );
@@ -448,7 +448,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 									$s3         = $s2 + $pct_audio;
 									?>
 							<div class="dilux-pie-container" id="stat-pie-section">
-								<div class="dilux-pie" style="background: conic-gradient(#2271b1 0% <?php echo esc_attr( $s1 ); ?>%, #d63638 <?php echo esc_attr( $s1 ); ?>% <?php echo esc_attr( $s2 ); ?>%, #dba617 <?php echo esc_attr( $s2 ); ?>% <?php echo esc_attr( $s3 ); ?>%, #8c8f94 <?php echo esc_attr( $s3 ); ?>% 100%);"></div>
+								<div class="dilux-pie" style="background: conic-gradient(#2271b1 0% <?php echo esc_attr( (string) $s1 ); ?>%, #d63638 <?php echo esc_attr( (string) $s1 ); ?>% <?php echo esc_attr( (string) $s2 ); ?>%, #dba617 <?php echo esc_attr( (string) $s2 ); ?>% <?php echo esc_attr( (string) $s3 ); ?>%, #8c8f94 <?php echo esc_attr( (string) $s3 ); ?>% 100%);"></div>
 								<div class="dilux-pie-legend">
 									<div class="dilux-legend-item"><span class="dilux-legend-dot" style="background: #2271b1;"></span>
 									<?php

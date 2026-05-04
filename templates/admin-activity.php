@@ -134,7 +134,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 					<?php elseif ( $activity_stats['trend_today'] < 0 ) : ?>
 						<span class="trend-down">
 							<span class="dashicons dashicons-arrow-down-alt"></span>
-							<?php echo esc_html( abs( $activity_stats['trend_today'] ) ); ?>%
+							<?php echo esc_html( (string) abs( $activity_stats['trend_today'] ) ); ?>%
 						</span>
 					<?php else : ?>
 						<span class="trend-neutral">
@@ -165,7 +165,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 			<div class="stat-card">
 				<div class="stat-number"><?php echo esc_html( number_format( $activity_stats['total_month'] ) ); ?></div>
 				<div class="stat-label"><?php esc_html_e( 'This Month', 'dilux-cloud-storage' ); ?></div>
-				<div class="stat-size"><?php echo esc_html( size_format( $activity_stats['month_size'] ) ); ?></div>
+				<div class="stat-size"><?php echo esc_html( (string) size_format( $activity_stats['month_size'] ) ); ?></div>
 			</div>
 
 			<div class="stat-card">
@@ -310,7 +310,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 								
 								<td class="column-size">
 									<?php if ( ! empty( $log['file_size'] ) && $log['file_size'] > 0 ) : ?>
-										<?php echo esc_html( size_format( $log['file_size'] ) ); ?>
+										<?php echo esc_html( (string) size_format( $log['file_size'] ) ); ?>
 									<?php else : ?>
 										<span class="no-size">—</span>
 									<?php endif; ?>
@@ -333,8 +333,8 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 								</td>
 
 								<td class="column-date">
-									<abbr title="<?php echo esc_attr( mysql2date( 'c', $log['created_at'] ) ); ?>">
-										<?php echo esc_html( human_time_diff( strtotime( $log['created_at'] ), time() ) . ' ' . __( 'ago', 'dilux-cloud-storage' ) ); ?>
+									<abbr title="<?php echo esc_attr( (string) mysql2date( 'c', $log['created_at'] ) ); ?>">
+										<?php echo esc_html( human_time_diff( (int) strtotime( $log['created_at'] ), time() ) . ' ' . __( 'ago', 'dilux-cloud-storage' ) ); ?>
 									</abbr>
 								</td>
 								
@@ -347,7 +347,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 											<?php
 											$metadata = json_decode( $log['metadata'], true );
 											if ( $metadata ) {
-												echo '<pre>' . esc_html( wp_json_encode( $metadata, JSON_PRETTY_PRINT ) ) . '</pre>';
+												echo '<pre>' . esc_html( (string) wp_json_encode( $metadata, JSON_PRETTY_PRINT ) ) . '</pre>';
 											}
 											?>
 										</div>
