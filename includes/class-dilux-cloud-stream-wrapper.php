@@ -760,15 +760,17 @@ class CloudStreamWrapper {
 	/**
 	 * Stream wrapper: Get file statistics
 	 *
-	 * @return array<string, mixed>|false
+	 * @return array<int|string, mixed>|false
 	 */
 	public function stream_stat() {
 		if ( $this->handle ) {
 			return fstat( $this->handle );
 		}
 
-		// No handle (in-memory buffer mode): return a minimal stat-like array.
-		return $this->create_stat( strlen( $this->content ) );
+		// No handle (in-memory buffer mode): synthesise a stat-like array
+		// for the in-memory content buffer using format_url_stat() which
+		// emits the same numeric/named-key shape PHP expects.
+		return $this->format_url_stat( array( 'size' => strlen( $this->content ) ) );
 	}
 
 	/**
@@ -859,7 +861,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $path
 	 * @param int    $flags
-	 * @return array<string, mixed>|false
+	 * @return array<int|string, mixed>|false
 	 */
 	public function url_stat( $path, $flags ) {
 		$parsed_path = $this->parse_path( $path );
@@ -923,7 +925,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $path
 	 * @param int    $flags
-	 * @return array<string, mixed>|false
+	 * @return array<int|string, mixed>|false
 	 */
 	private function create_stat( $path, $flags ) {
 		$cloud_client = self::get_cloud_client();
@@ -978,7 +980,7 @@ class CloudStreamWrapper {
 	 * Prepare a url_stat result array (copied from Infinite Uploads)
 	 *
 	 * @param mixed $result
-	 * @return array<string, mixed>
+	 * @return array<int|string, int>
 	 */
 	private function format_url_stat( $result = null ) {
 		$stat = array(

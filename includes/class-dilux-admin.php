@@ -210,7 +210,7 @@ class Admin {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 		$data    = \get_plugin_data( DILUX_CS_PLUGIN_FILE, false, false );
-		$version = (string) ( $data['Version'] ?? ( defined( 'DILUX_CS_VERSION' ) ? DILUX_CS_VERSION : '' ) );
+		$version = $data['Version'] !== '' ? (string) $data['Version'] : ( defined( 'DILUX_CS_VERSION' ) ? DILUX_CS_VERSION : '' );
 		return $version;
 	}
 
@@ -1494,7 +1494,7 @@ class Admin {
 					)
 				);
 			} else {
-				$msg = isset( $result['message'] ) ? (string) $result['message'] : __( 'Failed to start sync', 'dilux-cloud-storage' );
+				$msg = $result['message'] !== '' ? (string) $result['message'] : __( 'Failed to start sync', 'dilux-cloud-storage' );
 				wp_send_json_error( esc_html( $msg ) );
 			}
 		} catch ( \Exception $e ) {
@@ -1551,8 +1551,11 @@ class Admin {
 			foreach ( $synced_files as $file ) {
 				$file_path = $base_path . $file['file'];
 
-				// Safety check: ensure file is within uploads directory
-				if ( strpos( realpath( $file_path ), realpath( $base_path ) ) !== 0 ) {
+				// Safety check: ensure file is within uploads directory.
+				// realpath() returns false for non-existent paths; treat that as "outside".
+				$real_file = realpath( $file_path );
+				$real_base = realpath( $base_path );
+				if ( $real_file === false || $real_base === false || strpos( $real_file, $real_base ) !== 0 ) {
 					$errors[] = 'Skipped file outside uploads directory: ' . $file['file'];
 					continue;
 				}
@@ -1613,6 +1616,9 @@ class Admin {
 		}
 
 		$entries = scandir( $path );
+		if ( $entries === false ) {
+			return;
+		}
 		$entries = array_diff( $entries, array( '.', '..' ) );
 
 		foreach ( $entries as $entry ) {
@@ -1624,6 +1630,9 @@ class Admin {
 
 		// Check again after recursive cleanup
 		$entries = scandir( $path );
+		if ( $entries === false ) {
+			return;
+		}
 		$entries = array_diff( $entries, array( '.', '..' ) );
 
 		// Only delete if empty and not the base uploads directory.

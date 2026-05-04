@@ -365,7 +365,7 @@ class Plugin {
 						'new_files_size'           => $new_files_size,
 						'total_size_formatted'     => size_format( $total_size ),
 						'synced_size_formatted'    => size_format( $transferred_size ),
-						'pending_size_formatted'   => size_format( max( 0, $total_size - $transferred_size - $new_files_size ) ),
+						'pending_size_formatted'   => size_format( (int) max( 0, $total_size - $transferred_size - $new_files_size ) ),
 						'new_files_size_formatted' => size_format( $new_files_size ),
 					),
 				)
@@ -399,7 +399,7 @@ class Plugin {
 
 		// Set concurrency and start sync
 		$this->sync_manager->set_parallel_uploads( $concurrency );
-		$result = $this->sync_manager->start_sync( $retry_failed );
+		$result = $this->sync_manager->start_sync( (bool) $retry_failed );
 
 		if ( $result['success'] ) {
 			wp_send_json_success(
@@ -859,7 +859,7 @@ class Plugin {
 					'new_files_size'           => $new_files_size, // New files size
 					'total_size_formatted'     => size_format( $total_size ),
 					'synced_size_formatted'    => size_format( $transferred_size ),
-					'pending_size_formatted'   => size_format( max( 0, $old_pending_size ) ),
+					'pending_size_formatted'   => size_format( (int) max( 0, $old_pending_size ) ),
 					'new_files_size_formatted' => size_format( $new_files_size ),
 				)
 			);
