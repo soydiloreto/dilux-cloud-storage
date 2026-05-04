@@ -1025,6 +1025,13 @@ class CloudStreamWrapper {
 				// Regular file with 0777 access
 				$stat[2]      = 0100777;
 				$stat['mode'] = 0100777;
+				// Apply caller-provided size when present (e.g. in-memory buffer
+				// mode passes the buffered length here so fstat()/filesize()
+				// don't always report 0 bytes for cloud-backed streams).
+				if ( isset( $result['size'] ) && is_int( $result['size'] ) ) {
+					$stat[7]      = $result['size'];
+					$stat['size'] = $result['size'];
+				}
 				break;
 		}
 

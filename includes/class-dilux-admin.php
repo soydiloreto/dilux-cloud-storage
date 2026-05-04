@@ -1092,7 +1092,7 @@ class Admin {
 
 			if ( $stats['success'] ) {
 				ConfigManager::record_connection_success();
-				wp_send_json_success( $stats['data'] );
+				wp_send_json_success( $stats['data'] ?? array() );
 			} else {
 				wp_send_json_error( array( 'message' => $stats['message'] ?? 'Failed to fetch stats' ) );
 			}

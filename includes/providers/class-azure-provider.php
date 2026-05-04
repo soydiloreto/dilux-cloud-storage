@@ -593,7 +593,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * This method is specific to Azure (not in CloudStorageClientInterface).
 	 *
 	 * @param bool $force_refresh Skip transient cache and fetch fresh data
-	 * @return array<string, mixed>{success: bool, data?: array, message?: string}
+	 * @return array{success: bool, data?: array<string, mixed>, message?: string}
 	 */
 	public function get_container_stats( bool $force_refresh = false ): array {
 		if ( ! $force_refresh ) {
@@ -1230,7 +1230,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	/**
 	 * Extract HTTP error code from exception message.
 	 *
-	 * @param string $message \Exception message
+	 * @param string $message Caught exception message
 	 * @return string Error code (e.g. '403', '401', 'network')
 	 */
 	private function extract_error_code( string $message ): string {
