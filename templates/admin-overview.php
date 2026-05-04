@@ -88,9 +88,11 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 						);
 						$provider_display = $provider_names[ $config['cloud_provider'] ?? '' ] ?? ucfirst( $config['cloud_provider'] ?? '' );
 						echo wp_kses(
-							/* translators: %s: cloud provider name */
-
-							sprintf( __( 'Provider: <strong>%s</strong>', 'dilux-cloud-storage' ), esc_html( $provider_display ) ),
+							sprintf(
+								/* translators: %s: cloud provider name */
+								__( 'Provider: <strong>%s</strong>', 'dilux-cloud-storage' ),
+								esc_html( $provider_display )
+							),
 							array( 'strong' => array() )
 						);
 						?>
@@ -118,7 +120,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 					<p class="status-label" style="color:#dba617;">
 						<?php
 						printf(
-							/* translators: %s: short reason, e.g. "permission denied" */
+							/* translators: %s: short reason for the pause */
 							esc_html__( 'Paused (%s)', 'dilux-cloud-storage' ),
 							esc_html( $pause_label )
 						);
@@ -158,7 +160,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 					<p class="status-label" style="color:#dba617;">
 						<?php
 						printf(
-							/* translators: %s: short reason, e.g. "credentials unreadable" */
+							/* translators: %s: short reason for the pause */
 							esc_html__( 'Paused (%s)', 'dilux-cloud-storage' ),
 							esc_html( $pause_label )
 						);
@@ -206,7 +208,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 					<p class="status-label" style="color:#dba617;">
 						<?php
 						printf(
-							/* translators: %s: short reason, e.g. "credentials unreadable" */
+							/* translators: %s: short reason for the pause */
 							esc_html__( 'Paused (%s)', 'dilux-cloud-storage' ),
 							esc_html( $pause_label )
 						);
@@ -273,7 +275,7 @@ $pause_label = $is_paused ? Admin::pause_reason_short( $pause_cause ) : '';
 					<p class="status-details" style="color:#856404;">
 						<?php
 						printf(
-							/* translators: %s: short reason, e.g. "credentials unreadable" */
+							/* translators: %s: short reason for the pause */
 							esc_html__( 'Paused (%s) — see banner above.', 'dilux-cloud-storage' ),
 							esc_html( $pause_label )
 						);

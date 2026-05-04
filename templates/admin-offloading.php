@@ -37,7 +37,6 @@ $provider_config = ConfigManager::get_current_provider_config();
 				echo wp_kses(
 					sprintf(
 						/* translators: %s: URL of the Settings tab */
-
 						__( 'Please configure your cloud storage settings in the <a href="%s">Settings tab</a> before enabling offloading.', 'dilux-cloud-storage' ),
 						esc_url( admin_url( 'admin.php?page=dilux-cloud-storage&tab=settings' ) )
 					),
