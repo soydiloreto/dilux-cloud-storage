@@ -37,20 +37,22 @@ class SyncProgress {
 	private int $startTime;
 	/** @var int */
 	private int $lastUpdate;
-	/** @var array */
+	/**
+	 * @var array<int, string>
+	 */
 	private array $errors;
 
 	/**
 	 * Constructor
 	 *
-	 * @param string $status
-	 * @param int    $totalFiles
-	 * @param int    $processedFiles
-	 * @param int    $successfulUploads
-	 * @param int    $failedUploads
-	 * @param int    $startTime
-	 * @param int    $lastUpdate
-	 * @param array  $errors
+	 * @param string             $status
+	 * @param int                $totalFiles
+	 * @param int                $processedFiles
+	 * @param int                $successfulUploads
+	 * @param int                $failedUploads
+	 * @param int                $startTime
+	 * @param int                $lastUpdate
+	 * @param array<int, string> $errors
 	 *
 	 * @throws \InvalidArgumentException When status is not a valid SyncStatus value or counts are negative.
 	 */
@@ -81,7 +83,7 @@ class SyncProgress {
 	/**
 	 * Create from array
 	 *
-	 * @param array $data
+	 * @param array<string, mixed> $data
 	 * @return self
 	 */
 	public static function fromArray( array $data ): self {
@@ -182,7 +184,7 @@ class SyncProgress {
 	/**
 	 * Get errors
 	 *
-	 * @return array
+	 * @return array<int, string>
 	 */
 	public function getErrors(): array {
 		return $this->errors;
@@ -309,7 +311,7 @@ class SyncProgress {
 	/**
 	 * Convert to legacy array format
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(

@@ -31,7 +31,7 @@ class Admin {
 	/**
 	 * Initialize admin hooks
 	 */
-	public static function init() {
+	public static function init(): void {
 		Logger::debug( '[Dilux CS] Admin::init() called - registering hooks' );
 		\add_action( 'admin_menu', array( __CLASS__, 'add_admin_menu' ) );
 		\add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
@@ -82,7 +82,7 @@ class Admin {
 	/**
 	 * Render the admin page (called dynamically by Dilux One Core)
 	 */
-	public static function render_admin_page() {
+	public static function render_admin_page(): void {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing parameter, no state change.
 		$current_tab = isset( $_GET['tab'] ) ? \sanitize_text_field( wp_unslash( $_GET['tab'] ?? '' ) ) : 'overview';
 
@@ -145,7 +145,7 @@ class Admin {
 	/**
 	 * Register settings
 	 */
-	public static function register_settings() {
+	public static function register_settings(): void {
 		\register_setting(
 			'dilux_cloud_storage',
 			'dilux_cloud_storage_config',
@@ -177,7 +177,7 @@ class Admin {
 	 * contract and hardens anything submitted directly through it.
 	 *
 	 * @param mixed $value
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function sanitize_settings_option( $value ): array {
 		if ( ! is_array( $value ) ) {
@@ -210,7 +210,7 @@ class Admin {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 		$data    = \get_plugin_data( DILUX_CS_PLUGIN_FILE, false, false );
-		$version = (string) ( $data['Version'] ?? ( defined( 'DILUX_CS_VERSION' ) ? DILUX_CS_VERSION : '' ) );
+		$version = $data['Version'] !== '' ? (string) $data['Version'] : ( defined( 'DILUX_CS_VERSION' ) ? DILUX_CS_VERSION : '' );
 		return $version;
 	}
 
@@ -219,7 +219,7 @@ class Admin {
 	 *
 	 * @param mixed $hook_suffix
 	 */
-	public static function enqueue_admin_assets( $hook_suffix ) {
+	public static function enqueue_admin_assets( $hook_suffix ): void {
 		// Only load on our plugin pages
 		if ( strpos( $hook_suffix, 'dilux-cloud-storage' ) === false ) {
 			return;
@@ -271,7 +271,7 @@ class Admin {
 	 *
 	 * @param mixed $current_tab
 	 */
-	private static function render_tab_content( $current_tab ) {
+	private static function render_tab_content( $current_tab ): void {
 		$template_path = '';
 		$template_data = array();
 
@@ -612,7 +612,7 @@ class Admin {
 	/**
 	 * Render the connection health error banner.
 	 *
-	 * @param array $health Connection health data from ConfigManager
+	 * @param array<string, mixed> $health Connection health data from ConfigManager
 	 */
 	private static function render_connection_health_banner( array $health ): void {
 		$current_state = ConfigManager::get_state();
@@ -681,8 +681,10 @@ class Admin {
 
 	/**
 	 * Get basic stats for templates
+	 *
+	 * @return array<string, mixed>
 	 */
-	private static function get_basic_stats() {
+	private static function get_basic_stats(): array {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'dilux_cs_files';
 
@@ -714,20 +716,11 @@ class Admin {
 	}
 
 	/**
-	 * Get basic migration status for templates
-	 */
-	private static function get_basic_migration_status() {
-		return array(
-			'status'   => 'not_started',
-			'progress' => 0,
-			'stats'    => self::get_basic_stats(),
-		);
-	}
-
-	/**
 	 * Get basic activity stats for templates
+	 *
+	 * @return array<string, mixed>
 	 */
-	private static function get_basic_activity_stats() {
+	private static function get_basic_activity_stats(): array {
 		return array(
 			'total_today'    => 0,
 			'total_week'     => 0,
@@ -743,8 +736,10 @@ class Admin {
 
 	/**
 	 * Get basic health status for templates
+	 *
+	 * @return array<string, mixed>
 	 */
-	private static function get_basic_health_status() {
+	private static function get_basic_health_status(): array {
 		return array(
 			'overall'         => 50,
 			'checks_passed'   => 3,
@@ -755,8 +750,10 @@ class Admin {
 
 	/**
 	 * Get basic status checks for templates
+	 *
+	 * @return array<string, mixed>
 	 */
-	private static function get_basic_status_checks() {
+	private static function get_basic_status_checks(): array {
 		return array(
 			'azure_connection'      => array(
 				'status'  => 'warning',
@@ -816,7 +813,7 @@ class Admin {
 	 * @throws \Exception When PluginSettings/ProviderConfig validation fails inside
 	 *                   the inner try blocks (caught and converted to error notices).
 	 */
-	public static function save_config() {
+	public static function save_config(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'dilux_cs_save_config' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -951,7 +948,7 @@ class Admin {
 	/**
 	 * AJAX handler for testing connection
 	 */
-	public static function ajax_test_connection() {
+	public static function ajax_test_connection(): void {
 
 		// Check nonce for security - try different nonce field names
 		$nonce_verified = false;
@@ -964,24 +961,25 @@ class Admin {
 		if ( ! $nonce_verified ) {
 			Logger::error( '[Dilux CS] Security check failed. Available POST fields: ' . implode( ', ', array_keys( $_POST ) ) );
 			wp_send_json_error( array( 'message' => esc_html__( 'Security check failed', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Check user permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Detect provider type
 		$provider = sanitize_text_field( wp_unslash( $_POST['provider'] ?? 'azure' ) );
+
+		$api_key        = '';
+		$account_name   = '';
+		$container_name = '';
 
 		try {
 			if ( $provider === 'diluxone' ) {
 				$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
 				if ( empty( $api_key ) ) {
 					wp_send_json_error( array( 'message' => esc_html__( 'API Key is required', 'dilux-cloud-storage' ) ) );
-					return;
 				}
 				$client = \DiluxWP\CloudStorage\Factories\CloudStorageFactory::create(
 					'diluxone',
@@ -996,7 +994,6 @@ class Admin {
 
 				if ( empty( $account_name ) || empty( $account_key ) || empty( $container_name ) ) {
 					wp_send_json_error( array( 'message' => esc_html__( 'Missing required fields', 'dilux-cloud-storage' ) ) );
-					return;
 				}
 				$client = \DiluxWP\CloudStorage\Factories\CloudStorageFactory::create(
 					'azure',
@@ -1006,6 +1003,10 @@ class Admin {
 						'container_name'  => $container_name,
 					)
 				);
+			}
+
+			if ( $client === null ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Could not instantiate cloud client for the selected provider.', 'dilux-cloud-storage' ) ) );
 			}
 
 			$result = $client->test_connection();
@@ -1067,18 +1068,16 @@ class Admin {
 	 * Uses instanceof to detect which method to call (get_stats for DiluxOne,
 	 * get_container_stats for Azure) since these methods are not in the interface.
 	 */
-	public static function ajax_refresh_stats() {
+	public static function ajax_refresh_stats(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		$client = ConfigManager::get_cloud_client();
 		if ( ! $client ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Cloud client not available', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1089,12 +1088,11 @@ class Admin {
 				$stats = $client->get_container_stats( true );
 			} else {
 				wp_send_json_error( array( 'message' => esc_html__( 'Unknown provider type', 'dilux-cloud-storage' ) ) );
-				return;
 			}
 
 			if ( $stats['success'] ) {
 				ConfigManager::record_connection_success();
-				wp_send_json_success( $stats['data'] );
+				wp_send_json_success( $stats['data'] ?? array() );
 			} else {
 				wp_send_json_error( array( 'message' => $stats['message'] ?? 'Failed to fetch stats' ) );
 			}
@@ -1106,21 +1104,19 @@ class Admin {
 	/**
 	 * AJAX handler for saving updated credentials (Update Credentials modal)
 	 */
-	public static function ajax_save_updated_credentials() {
+	public static function ajax_save_updated_credentials(): void {
 		// Check nonce
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		// Check user permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Unauthorized', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Validate that connection test passed
 		$test_data = get_transient( 'dilux_cs_connection_test_passed_' . get_current_user_id() );
 		if ( ! $test_data ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'You must test the connection first', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		$provider = sanitize_text_field( wp_unslash( $_POST['provider'] ?? '' ) );
@@ -1133,7 +1129,6 @@ class Admin {
 			if ( ( $test_data['provider'] ?? '' ) !== 'diluxone' ||
 				( $test_data['api_key_prefix'] ?? '' ) !== substr( $api_key, 0, 12 ) ) {
 				wp_send_json_error( array( 'message' => esc_html__( 'Credentials do not match tested values. Please test again.', 'dilux-cloud-storage' ) ) );
-				return;
 			}
 
 			// Preserve cdn_base_url from existing config
@@ -1154,7 +1149,6 @@ class Admin {
 			if ( ( $test_data['account_name'] ?? '' ) !== $account_name ||
 				( $test_data['container_name'] ?? '' ) !== $container_name ) {
 				wp_send_json_error( array( 'message' => esc_html__( 'Credentials do not match tested values. Please test again.', 'dilux-cloud-storage' ) ) );
-				return;
 			}
 
 			$provider_data = array(
@@ -1201,7 +1195,7 @@ class Admin {
 	/**
 	 * Handle offloading configuration save
 	 */
-	public static function save_offloading_config() {
+	public static function save_offloading_config(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'dilux_cs_save_offloading' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1260,7 +1254,7 @@ class Admin {
 	/**
 	 * AJAX handler for migration actions
 	 */
-	public static function ajax_migration_action() {
+	public static function ajax_migration_action(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1275,7 +1269,6 @@ class Admin {
 
 		if ( empty( $action ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'No action specified', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		// Legacy endpoint - MigrationTools class was removed.
@@ -1290,7 +1283,7 @@ class Admin {
 	/**
 	 * AJAX handler for individual status checks
 	 */
-	public static function ajax_test_check() {
+	public static function ajax_test_check(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1305,7 +1298,6 @@ class Admin {
 
 		if ( empty( $check_type ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'No check type specified', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1346,7 +1338,6 @@ class Admin {
 				default:
 					/* translators: %s: requested check type identifier */
 					wp_send_json_error( array( 'message' => sprintf( esc_html__( 'Invalid check type: %s', 'dilux-cloud-storage' ), $check_type ) ) );
-					return;
 			}
 
 			wp_send_json_success(
@@ -1371,7 +1362,7 @@ class Admin {
 	/**
 	 * Remove provider configuration
 	 */
-	public static function remove_provider_config() {
+	public static function remove_provider_config(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'dilux_cs_remove_provider' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1434,7 +1425,7 @@ class Admin {
 	/**
 	 * AJAX: Scan files for sync
 	 */
-	public static function ajax_scan_files() {
+	public static function ajax_scan_files(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1482,7 +1473,7 @@ class Admin {
 	/**
 	 * AJAX: Start sync process
 	 */
-	public static function ajax_start_sync() {
+	public static function ajax_start_sync(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1496,7 +1487,7 @@ class Admin {
 			$sync_manager = new \DiluxWP\CloudStorage\SyncManager();
 			$result       = $sync_manager->start_sync();
 
-			if ( $result ) {
+			if ( ! empty( $result['success'] ) ) {
 				// Update state to syncing
 				ConfigManager::set_state( 'syncing' );
 
@@ -1507,7 +1498,8 @@ class Admin {
 					)
 				);
 			} else {
-				wp_send_json_error( esc_html__( 'Failed to start sync', 'dilux-cloud-storage' ) );
+				$msg = $result['message'] !== '' ? (string) $result['message'] : __( 'Failed to start sync', 'dilux-cloud-storage' );
+				wp_send_json_error( esc_html( $msg ) );
 			}
 		} catch ( \Exception $e ) {
 			/* translators: %s: error message */
@@ -1518,7 +1510,7 @@ class Admin {
 	/**
 	 * AJAX: Delete local files after sync
 	 */
-	public static function ajax_delete_local_files() {
+	public static function ajax_delete_local_files(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1536,7 +1528,6 @@ class Admin {
 						'message' => __( 'Offloading must be active before deleting local files', 'dilux-cloud-storage' ),
 					)
 				);
-				return;
 			}
 
 			// Get all synced files from DB
@@ -1550,7 +1541,6 @@ class Admin {
 						'message' => __( 'No synced files found to delete', 'dilux-cloud-storage' ),
 					)
 				);
-				return;
 			}
 
 			// Get upload directory base path
@@ -1565,8 +1555,11 @@ class Admin {
 			foreach ( $synced_files as $file ) {
 				$file_path = $base_path . $file['file'];
 
-				// Safety check: ensure file is within uploads directory
-				if ( strpos( realpath( $file_path ), realpath( $base_path ) ) !== 0 ) {
+				// Safety check: ensure file is within uploads directory.
+				// realpath() returns false for non-existent paths; treat that as "outside".
+				$real_file = realpath( $file_path );
+				$real_base = realpath( $base_path );
+				if ( $real_file === false || $real_base === false || strpos( $real_file, $real_base ) !== 0 ) {
 					$errors[] = 'Skipped file outside uploads directory: ' . $file['file'];
 					continue;
 				}
@@ -1581,6 +1574,7 @@ class Admin {
 
 				// Delete the file. wp_delete_file() returns void, so we re-check existence.
 				wp_delete_file( $file_path );
+				clearstatcache( true, $file_path );
 				if ( ! file_exists( $file_path ) ) {
 					++$deleted_count;
 					$total_size_freed += $file_size;
@@ -1620,12 +1614,15 @@ class Admin {
 	 *
 	 * @param mixed $path
 	 */
-	private static function cleanup_empty_directories( $path ) {
+	private static function cleanup_empty_directories( $path ): void {
 		if ( ! is_dir( $path ) ) {
 			return;
 		}
 
 		$entries = scandir( $path );
+		if ( $entries === false ) {
+			return;
+		}
 		$entries = array_diff( $entries, array( '.', '..' ) );
 
 		foreach ( $entries as $entry ) {
@@ -1637,6 +1634,9 @@ class Admin {
 
 		// Check again after recursive cleanup
 		$entries = scandir( $path );
+		if ( $entries === false ) {
+			return;
+		}
 		$entries = array_diff( $entries, array( '.', '..' ) );
 
 		// Only delete if empty and not the base uploads directory.
@@ -1662,7 +1662,7 @@ class Admin {
 	 * 1. Active sync: Cancel the sync and reset to CONFIGURED
 	 * 2. Synced state: Reset everything (DB + metadata + state) back to CONFIGURED
 	 */
-	public static function ajax_cancel_sync() {
+	public static function ajax_cancel_sync(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1688,7 +1688,6 @@ class Admin {
 					'message'           => __( 'Cannot cancel sync: Another tab is currently syncing', 'dilux-cloud-storage' ),
 				)
 			);
-			return;
 		}
 
 		try {
@@ -1738,7 +1737,7 @@ class Admin {
 	/**
 	 * AJAX: Mark sync as complete (sets state to SYNCED)
 	 */
-	public static function ajax_mark_sync_complete() {
+	public static function ajax_mark_sync_complete(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1795,14 +1794,14 @@ class Admin {
 	 * Old method removed in favor of the unified sync flow. Retry is now
 	 * handled by Plugin::ajax_cs_start_sync with retry_failed=1.
 	 */
-	public static function ajax_retry_failed() {
+	public static function ajax_retry_failed(): void {
 		wp_send_json_error( esc_html__( 'This endpoint is deprecated. Use ajax_cs_start_sync with retry_failed parameter instead.', 'dilux-cloud-storage' ) );
 	}
 
 	/**
 	 * AJAX: Clear failed files list
 	 */
-	public static function ajax_clear_failed() {
+	public static function ajax_clear_failed(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1825,7 +1824,7 @@ class Admin {
 	/**
 	 * AJAX: Resync all files (re-scan and upload missing files)
 	 */
-	public static function ajax_resync_all() {
+	public static function ajax_resync_all(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1873,14 +1872,13 @@ class Admin {
 	/**
 	 * AJAX handler to remove provider configuration
 	 */
-	public static function ajax_remove_provider() {
+	public static function ajax_remove_provider(): void {
 		// Check nonce
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		// Check permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1929,14 +1927,13 @@ class Admin {
 	/**
 	 * AJAX handler to import configuration from JSON
 	 */
-	public static function ajax_import_config() {
+	public static function ajax_import_config(): void {
 		// Check nonce
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		// Check permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'dilux-cloud-storage' ) ) );
-			return;
 		}
 
 		try {
@@ -1949,7 +1946,6 @@ class Admin {
 
 			if ( empty( $config_json ) ) {
 				wp_send_json_error( __( 'No configuration data provided', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// Decode JSON
@@ -1957,12 +1953,10 @@ class Admin {
 
 			if ( json_last_error() !== JSON_ERROR_NONE ) {
 				wp_send_json_error( __( 'Invalid JSON format: ', 'dilux-cloud-storage' ) . json_last_error_msg() );
-				return;
 			}
 
 			if ( empty( $config_data ) || ! is_array( $config_data ) ) {
 				wp_send_json_error( __( 'Invalid configuration data', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			Logger::info( '[Dilux CS] Importing configuration with ' . count( $config_data ) . ' options' );
@@ -1977,7 +1971,6 @@ class Admin {
 
 			if ( $dilux_options_count === 0 ) {
 				wp_send_json_error( __( 'No valid Dilux Cloud Storage options found in import data', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// Import each option

@@ -7,7 +7,7 @@
  * (wp_remote_*) does not support streamed request bodies, so cURL is required
  * for the actual file transfer here. WP HTTP API IS used for everything else
  * (auth probes, metadata, list, delete). Filesystem operations operate on local
- * temporary files outside /wp-content/uploads/, so WP_Filesystem does not apply.
+ * temporary files outside /wp-content/uploads/, so \WP_Filesystem does not apply.
  * These rules are intentionally suppressed file-wide:
  *
  * phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_init
@@ -59,15 +59,12 @@ class AzureProvider implements CloudStorageClientInterface {
 	private string $endpoint;
 	// NOTE: use_https removed - HTTPS is always enforced (Azure requirement)
 
-	/** @var AzureConfig|null Configuration DTO (internal use) */
-	private ?AzureConfig $config = null;
-
 	/**
 	 * Constructor
 	 *
 	 * Accepts array for backward compatibility, but uses AzureConfig DTO internally
 	 *
-	 * @param array $config Configuration array
+	 * @param array<string, mixed> $config Configuration array
 	 */
 	public function __construct( array $config = array() ) {
 		// Initialize primitive properties first (backward compatibility)
@@ -79,10 +76,12 @@ class AzureProvider implements CloudStorageClientInterface {
 		// Build endpoint with HTTPS (Azure requirement - always enforced)
 		$this->endpoint = "https://{$this->storage_account}.blob.core.windows.net";
 
-		// Try to create AzureConfig DTO (with validation) for internal use
+		// Validate the config shape via AzureConfig::fromArray() — the DTO
+		// itself is not retained because nothing currently reads from it,
+		// but the constructor still throws on bad data which we log.
 		if ( ! empty( $this->storage_account ) && ! empty( $this->container_name ) && ! empty( $this->access_key ) ) {
 			try {
-				$this->config = AzureConfig::fromArray( $config );
+				AzureConfig::fromArray( $config );
 				Logger::log( '[Dilux AzureProvider] Initialized with account: ' . $this->storage_account, 'info' );
 			} catch ( \InvalidArgumentException $e ) {
 				Logger::log( '[Dilux AzureProvider] Invalid config: ' . $e->getMessage(), 'error' );
@@ -93,7 +92,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	/**
 	 * Test connection to Azure Blob Storage
 	 *
-	 * @return array ['success' => bool, 'message' => string]
+	 * @return array<string, mixed> ['success' => bool, 'message' => string]
 	 */
 	public function test_connection(): array {
 		$result = $this->test_connection_dto();
@@ -148,10 +147,10 @@ class AzureProvider implements CloudStorageClientInterface {
 	/**
 	 * Upload file to Azure Blob Storage
 	 *
-	 * @param string $local_path Local file path
-	 * @param string $remote_path Remote path in cloud
-	 * @param array  $options Additional options
-	 * @return array ['success' => bool, 'url' => string, 'error' => string]
+	 * @param string               $local_path Local file path
+	 * @param string               $remote_path Remote path in cloud
+	 * @param array<string, mixed> $options Additional options
+	 * @return array<string, mixed> ['success' => bool, 'url' => string, 'error' => string]
 	 */
 	public function upload_file( string $local_path, string $remote_path, array $options = array() ): array {
 		$result = $this->upload_file_dto( $local_path, $remote_path, $options );
@@ -161,9 +160,9 @@ class AzureProvider implements CloudStorageClientInterface {
 	/**
 	 * Upload file to Azure Blob Storage (internal DTO version)
 	 *
-	 * @param string $local_path Local file path
-	 * @param string $remote_path Remote path in cloud
-	 * @param array  $options Additional options
+	 * @param string               $local_path Local file path
+	 * @param string               $remote_path Remote path in cloud
+	 * @param array<string, mixed> $options Additional options
 	 * @return UploadResult
 	 */
 	private function upload_file_dto( string $local_path, string $remote_path, array $options = array() ): UploadResult {
@@ -177,6 +176,9 @@ class AzureProvider implements CloudStorageClientInterface {
 
 			$url          = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
 			$file_content = file_get_contents( $local_path );
+			if ( $file_content === false ) {
+				return UploadResult::failure( 'Could not read local file: ' . $local_path );
+			}
 
 			// ⭐ CRITICAL FIX: Use destination path for MIME type detection (not temp file path)
 			// Temp files from wp_tempnam() have no extension, causing 'application/octet-stream'
@@ -219,7 +221,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $remote_path Remote path in cloud
 	 * @param string $local_path Local destination path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function download_file( string $remote_path, string $local_path ): array {
 		$result = $this->download_file_dto( $remote_path, $local_path );
@@ -352,7 +354,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * Get file information from Azure (size + MD5)
 	 *
 	 * @param string $remote_path Remote file path
-	 * @return array|false ['size' => int, 'md5' => string, 'last_modified' => string] or false if not found
+	 * @return array<string, mixed>|false ['size' => int, 'md5' => string, 'last_modified' => string] or false if not found
 	 */
 	public function get_file_info( string $remote_path ) {
 		$file_info = $this->get_file_info_dto( $remote_path );
@@ -407,7 +409,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * Delete file from Azure Blob Storage
 	 *
 	 * @param string $remote_path Remote path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function delete_file( string $remote_path ): array {
 		$result = $this->delete_file_dto( $remote_path );
@@ -459,7 +461,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 *
 	 * @param string $source_path Source blob path
 	 * @param string $dest_path Destination blob path
-	 * @return array Result array with 'success' and optional 'error'
+	 * @return array<string, mixed> Result array with 'success' and optional 'error'
 	 */
 	public function copy_blob( string $source_path, string $dest_path ): array {
 		$result = $this->copy_blob_dto( $source_path, $dest_path );
@@ -488,6 +490,9 @@ class AzureProvider implements CloudStorageClientInterface {
 			// Build canonicalized headers for PUT with copy source
 			$date       = gmdate( 'D, d M Y H:i:s T' );
 			$parsed_url = wp_parse_url( $dest_url );
+			if ( ! is_array( $parsed_url ) || empty( $parsed_url['path'] ) ) {
+				return OperationResult::failure( 'Invalid destination URL for copy: ' . $dest_url );
+			}
 
 			// Build canonicalized resource
 			$canonicalized_resource = '/' . $this->storage_account . $parsed_url['path'];
@@ -566,7 +571,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * List all files in Azure Blob Storage
 	 *
 	 * @param string $prefix Filter by prefix (e.g., 'uploads/')
-	 * @return array Array of file info: [['path' => string, 'size' => int, 'md5' => string], ...]
+	 * @return array<string, mixed> Array of file info: [['path' => string, 'size' => int, 'md5' => string], ...]
 	 */
 	public function list_files( string $prefix = 'uploads/' ): array {
 		$file_infos = $this->list_files_dto( $prefix );
@@ -588,7 +593,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * This method is specific to Azure (not in CloudStorageClientInterface).
 	 *
 	 * @param bool $force_refresh Skip transient cache and fetch fresh data
-	 * @return array{success: bool, data?: array, message?: string}
+	 * @return array{success: bool, data?: array<string, mixed>, message?: string}
 	 */
 	public function get_container_stats( bool $force_refresh = false ): array {
 		if ( ! $force_refresh ) {
@@ -810,14 +815,17 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * @param string $url Request URL
 	 * @param string $body Request body
 	 * @param string $content_type Content type
-	 * @return array Headers array
+	 * @return array<string, mixed> Headers array
 	 */
 	private function get_auth_headers( string $method, string $url, string $body = '', string $content_type = '' ): array {
 		$date       = gmdate( 'D, d M Y H:i:s T' );
 		$parsed_url = wp_parse_url( $url );
+		if ( ! is_array( $parsed_url ) ) {
+			$parsed_url = array();
+		}
 
 		// Build canonicalized resource
-		$canonicalized_resource = '/' . $this->storage_account . $parsed_url['path'];
+		$canonicalized_resource = '/' . $this->storage_account . ( $parsed_url['path'] ?? '' );
 
 		// Add canonicalized query parameters (sorted alphabetically)
 		if ( isset( $parsed_url['query'] ) ) {
@@ -825,7 +833,7 @@ class AzureProvider implements CloudStorageClientInterface {
 			ksort( $query_params ); // Sort alphabetically
 
 			foreach ( $query_params as $key => $value ) {
-				$canonicalized_resource .= "\n" . strtolower( $key ) . ':' . $value;
+				$canonicalized_resource .= "\n" . strtolower( (string) $key ) . ':' . ( is_array( $value ) ? wp_json_encode( $value ) : (string) $value );
 			}
 		}
 
@@ -892,8 +900,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * Prepare batch upload handle for parallel sync
 	 * Provider-specific implementation for Azure Blob Storage
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_batch_upload_handle( array $file_info ): array {
 		$local_path  = $file_info['local_path'];
@@ -984,8 +992,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * Prepare chunked upload handle for large files (>10MB)
 	 * Provider-specific implementation for Azure Block Blob API
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_chunked_upload_handle( array $file_info ): array {
 		$local_path  = $file_info['local_path'];
@@ -1024,7 +1032,7 @@ class AzureProvider implements CloudStorageClientInterface {
 				}
 
 				// Generate unique block ID (base64 encoded, must be same length)
-				$block_id    = base64_encode( str_pad( $block_index, 6, '0', STR_PAD_LEFT ) );
+				$block_id    = base64_encode( str_pad( (string) $block_index, 6, '0', STR_PAD_LEFT ) );
 				$block_ids[] = $block_id;
 
 				// Upload block
@@ -1065,7 +1073,7 @@ class AzureProvider implements CloudStorageClientInterface {
 						$error_msg .= " - cURL: {$curl_error}";
 					}
 					if ( ! empty( $response ) ) {
-						$error_msg .= ' - Azure Response: ' . substr( $response, 0, 500 );
+						$error_msg .= ' - Azure Response: ' . substr( (string) $response, 0, 500 );
 					}
 					Logger::info( '[Dilux AzureProvider] Chunked upload error: ' . $error_msg );
 					return array(
@@ -1140,8 +1148,8 @@ class AzureProvider implements CloudStorageClientInterface {
 	 * Prepare a cURL handle for downloading a file from Azure Blob Storage
 	 * Used by SyncManager for parallel downloads during reverse sync (disconnect)
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_download_handle( array $file_info ): array {
 		$remote_path = $file_info['remote_path'];
@@ -1222,7 +1230,7 @@ class AzureProvider implements CloudStorageClientInterface {
 	/**
 	 * Extract HTTP error code from exception message.
 	 *
-	 * @param string $message Exception message
+	 * @param string $message Caught exception message
 	 * @return string Error code (e.g. '403', '401', 'network')
 	 */
 	private function extract_error_code( string $message ): string {

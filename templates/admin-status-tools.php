@@ -281,7 +281,7 @@ $section = $section ?? 'status';
 						</tr>
 						<tr>
 							<td><?php esc_html_e( 'Max Upload Size', 'dilux-cloud-storage' ); ?></td>
-							<td><strong><?php echo esc_html( size_format( wp_max_upload_size() ) ); ?></strong></td>
+							<td><strong><?php echo esc_html( (string) size_format( wp_max_upload_size() ) ); ?></strong></td>
 						</tr>
 						<tr>
 							<td><?php esc_html_e( 'Max Execution Time', 'dilux-cloud-storage' ); ?></td>

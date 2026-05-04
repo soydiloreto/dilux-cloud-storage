@@ -87,7 +87,7 @@ class OperationResult {
 	/**
 	 * Convert to legacy array format
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function toArray(): array {
 		return array(
@@ -99,7 +99,7 @@ class OperationResult {
 	/**
 	 * Create from legacy array format
 	 *
-	 * @param array $data
+	 * @param array<string, mixed> $data
 	 * @return self
 	 */
 	public static function fromArray( array $data ): self {

@@ -48,7 +48,7 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	/**
 	 * Temporary files to cleanup on destruct
 	 *
-	 * @var array
+	 * @var array<int, string>
 	 */
 	protected $temp_files_to_cleanup = array();
 
@@ -57,7 +57,7 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	 *
 	 * If file is in diluxcloud://, download to temp first, then load.
 	 *
-	 * @return true|WP_Error True if loaded; WP_Error on failure.
+	 * @return true|\WP_Error True if loaded; \WP_Error on failure.
 	 */
 	public function load() {
 		if ( is_resource( $this->image ) ) {
@@ -76,7 +76,10 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 		}
 
 		// ⭐ File is diluxcloud:// - download to temp for GD processing
-		$temp_filename                 = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
+		$temp_filename = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
+		if ( $temp_filename === false ) {
+			return new \WP_Error( 'error_loading_image', __( 'Could not create temp file for cloud download.', 'dilux-cloud-storage' ) );
+		}
 		$this->temp_files_to_cleanup[] = $temp_filename;
 
 		// Copy from diluxcloud:// to local temp
@@ -103,10 +106,10 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	 * 2. Copy temp to diluxcloud:// (triggers stream wrapper upload to Azure)
 	 * 3. Delete temp
 	 *
-	 * @param resource|GdImage $image GD image resource
-	 * @param string           $filename Output filename
-	 * @param string           $mime_type Output mime type
-	 * @return array|WP_Error Saved file info or error
+	 * @param resource|object $image GD image (resource on PHP 7, \GdImage on PHP 8+)
+	 * @param string          $filename Output filename
+	 * @param string          $mime_type Output mime type
+	 * @return array<string, mixed>|\WP_Error Saved file info or error
 	 */
 	protected function _save( $image, $filename = null, $mime_type = null ) {
 		list($filename, $extension, $mime_type) = $this->get_output_format( $filename, $mime_type );
@@ -121,11 +124,16 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 		if ( strpos( $filename, $upload_dir['basedir'] ) === 0 ) {
 			$temp_filename = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
 		} else {
-			// Not our stream wrapper, use parent directly
+			// Not our stream wrapper, use parent directly.
+			// PHPStan can't resolve \GdImage because the GD extension may not
+			// be loaded in CI; the parent declares GdImage|resource which our
+			// $image satisfies at runtime.
+			// @phpstan-ignore-next-line argument.type
 			return parent::_save( $image, $filename, $mime_type );
 		}
 
 		// Save to temp file first
+		// @phpstan-ignore-next-line argument.type
 		$save = parent::_save( $image, $temp_filename, $mime_type );
 
 		if ( is_wp_error( $save ) ) {

@@ -31,7 +31,7 @@ class SyncStatus {
 	/**
 	 * Get all valid statuses
 	 *
-	 * @return array
+	 * @return array<int, string>
 	 */
 	public static function getAll(): array {
 		return array(

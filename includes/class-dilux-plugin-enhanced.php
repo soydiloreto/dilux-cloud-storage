@@ -45,9 +45,6 @@ class Plugin {
 
 	private static ?Plugin $instance = null;
 
-	/** @var Admin|null Admin instance */
-	private ?Admin $admin = null;
-
 	/** @var SyncManager|null Sync manager instance */
 	private ?SyncManager $sync_manager = null;
 
@@ -80,7 +77,7 @@ class Plugin {
 	 * Check and update database table version
 	 * Auto-creates or upgrades table on version mismatch
 	 */
-	private function check_and_update_database() {
+	private function check_and_update_database(): void {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
 
 		$current_version = get_option( DiluxDB::TABLE_VERSION_OPTION, '0' );
@@ -95,7 +92,7 @@ class Plugin {
 	/**
 	 * Initialize new architecture
 	 */
-	private function init_new_architecture() {
+	private function init_new_architecture(): void {
 		// Comentado para reducir logs
 		// Logger::log('[Dilux Plugin] Initializing NEW architecture', 'info');
 
@@ -169,7 +166,7 @@ class Plugin {
 	/**
 	 * Activate stream wrapper for cloud offloading
 	 */
-	private function activate_stream_wrapper() {
+	private function activate_stream_wrapper(): void {
 		if ( CloudStreamWrapper::activate_offloading() ) {
 			Logger::info( '[Dilux Plugin] Stream wrapper activated' );
 
@@ -187,8 +184,8 @@ class Plugin {
 	 * Our custom editors handle diluxcloud:// paths by using temp files.
 	 * This allows WordPress to generate thumbnails even when offloading is active.
 	 *
-	 * @param array $editors Array of image editor class names
-	 * @return array Modified array with our custom editors first
+	 * @param array<string, mixed> $editors Array of image editor class names
+	 * @return array<string, mixed> Modified array with our custom editors first
 	 */
 	public function filter_image_editors( array $editors ): array {
 		// Remove default Imagick if present
@@ -210,7 +207,7 @@ class Plugin {
 	/**
 	 * AJAX: Start synchronization
 	 */
-	public function ajax_start_sync() {
+	public function ajax_start_sync(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -219,7 +216,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		$result = $this->sync_manager->start_sync();
@@ -234,7 +230,7 @@ class Plugin {
 	/**
 	 * AJAX: Get sync progress
 	 */
-	public function ajax_get_sync_progress() {
+	public function ajax_get_sync_progress(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -243,7 +239,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Process batch if sync is active
@@ -269,7 +264,7 @@ class Plugin {
 	 *
 	 * This prevents race conditions when user takes time to confirm
 	 */
-	public function ajax_cs_start_sync() {
+	public function ajax_cs_start_sync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -278,7 +273,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Get parameters
@@ -305,7 +299,6 @@ class Plugin {
 					'details'           => $validation['details'],
 				)
 			);
-			return;
 		}
 
 		// ⭐ Validación OK
@@ -372,12 +365,11 @@ class Plugin {
 						'new_files_size'           => $new_files_size,
 						'total_size_formatted'     => size_format( $total_size ),
 						'synced_size_formatted'    => size_format( $transferred_size ),
-						'pending_size_formatted'   => size_format( max( 0, $total_size - $transferred_size - $new_files_size ) ),
+						'pending_size_formatted'   => size_format( (int) max( 0, $total_size - $transferred_size - $new_files_size ) ),
 						'new_files_size_formatted' => size_format( $new_files_size ),
 					),
 				)
 			);
-			return;
 		}
 
 		// ⭐ SEGUNDA VEZ: Usuario confirmó → ejecutar acción
@@ -407,7 +399,7 @@ class Plugin {
 
 		// Set concurrency and start sync
 		$this->sync_manager->set_parallel_uploads( $concurrency );
-		$result = $this->sync_manager->start_sync( $retry_failed );
+		$result = $this->sync_manager->start_sync( (bool) $retry_failed );
 
 		if ( $result['success'] ) {
 			wp_send_json_success(
@@ -426,7 +418,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Process batch (time-based batching)
 	 * For recursion-based approach
 	 */
-	public function ajax_cs_process_batch() {
+	public function ajax_cs_process_batch(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -435,7 +427,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// ⭐ FIXED: Restore concurrency level from metadata
@@ -453,7 +444,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Start reverse sync (for disconnect)
 	 * Supports 'continue' and 'scratch' modes
 	 */
-	public function ajax_cs_start_reverse_sync() {
+	public function ajax_cs_start_reverse_sync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -462,7 +453,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Get parameters
@@ -488,7 +478,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Process reverse sync batch
 	 * ⭐ OPTIMIZED: Restore concurrency level from metadata
 	 */
-	public function ajax_cs_process_reverse_batch() {
+	public function ajax_cs_process_reverse_batch(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -497,7 +487,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// ⭐ OPTIMIZED: Restore concurrency level from metadata (same as normal sync)
@@ -515,7 +504,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Compare with cloud to detect deleted files
 	 * Used before disconnect to catalog cloud files
 	 */
-	public function ajax_cs_compare_cloud() {
+	public function ajax_cs_compare_cloud(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -524,7 +513,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		// Compare with cloud (no pagination needed)
@@ -540,7 +528,7 @@ class Plugin {
 	/**
 	 * ⭐ NEW AJAX: Get deleted files stats (for disconnect modal)
 	 */
-	public function ajax_cs_get_deleted_stats() {
+	public function ajax_cs_get_deleted_stats(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -564,7 +552,7 @@ class Plugin {
 	 * Like Infinite Uploads ajax_remote_filelist - runs before disconnect
 	 * Finds files in Azure that are not in DB and marks them as deleted=1
 	 */
-	public function ajax_cs_scan_remote() {
+	public function ajax_cs_scan_remote(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -573,7 +561,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		try {
@@ -584,7 +571,6 @@ class Plugin {
 
 			if ( ! $cloud_client ) {
 				wp_send_json_error( esc_html__( 'Cloud client not configured', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// List all files from Azure
@@ -600,7 +586,6 @@ class Plugin {
 						'message'   => 'No files in cloud',
 					)
 				);
-				return;
 			}
 
 			Logger::info( '[Dilux Plugin] Found ' . count( $azure_files ) . ' files in Azure, checking against DB...' );
@@ -700,7 +685,7 @@ class Plugin {
 	 * Like Infinite Uploads - uses DB as source of truth (after remote scan)
 	 * Shows what needs to be downloaded before disconnect
 	 */
-	public function ajax_cs_calculate_download() {
+	public function ajax_cs_calculate_download(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -709,7 +694,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		try {
@@ -781,7 +765,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Calculate files to sync (upload)
 	 * This ONLY counts files - it does NOT start the sync
 	 */
-	public function ajax_cs_calculate_sync() {
+	public function ajax_cs_calculate_sync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -790,7 +774,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		try {
@@ -876,7 +859,7 @@ class Plugin {
 					'new_files_size'           => $new_files_size, // New files size
 					'total_size_formatted'     => size_format( $total_size ),
 					'synced_size_formatted'    => size_format( $transferred_size ),
-					'pending_size_formatted'   => size_format( max( 0, $old_pending_size ) ),
+					'pending_size_formatted'   => size_format( (int) max( 0, $old_pending_size ) ),
 					'new_files_size_formatted' => size_format( $new_files_size ),
 				)
 			);
@@ -891,7 +874,7 @@ class Plugin {
 	/**
 	 * AJAX: Activate offloading
 	 */
-	public function ajax_activate_offloading() {
+	public function ajax_activate_offloading(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -900,7 +883,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		if ( CloudStreamWrapper::activate_offloading() ) {
@@ -913,7 +895,7 @@ class Plugin {
 	/**
 	 * AJAX: Deactivate offloading
 	 */
-	public function ajax_deactivate_offloading() {
+	public function ajax_deactivate_offloading(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -922,7 +904,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		if ( CloudStreamWrapper::deactivate_offloading() ) {
@@ -953,7 +934,6 @@ class Plugin {
 
 		if ( ! defined( 'DILUX_DEV_MODE' ) || ! DILUX_DEV_MODE ) {
 			wp_send_json_error( esc_html__( 'DILUX_DEV_MODE is not enabled', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		$current_state = ConfigManager::get_state();
@@ -967,7 +947,6 @@ class Plugin {
 					'configured'
 				)
 			);
-			return;
 		}
 
 		// Set state to SYNCED first (required by CloudStreamWrapper::activate_offloading)
@@ -1000,7 +979,6 @@ class Plugin {
 
 		if ( ! defined( 'DILUX_DEV_MODE' ) || ! DILUX_DEV_MODE ) {
 			wp_send_json_error( esc_html__( 'DILUX_DEV_MODE is not enabled', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		$current_state = ConfigManager::get_state();
@@ -1014,7 +992,6 @@ class Plugin {
 					'offloading_active'
 				)
 			);
-			return;
 		}
 
 		// Deactivate stream wrapper
@@ -1034,7 +1011,7 @@ class Plugin {
 	/**
 	 * ⭐ Reset state to configured (when canceling sync)
 	 */
-	public function ajax_cs_reset_state_to_configured() {
+	public function ajax_cs_reset_state_to_configured(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1043,7 +1020,6 @@ class Plugin {
 
 		if ( ! $this->sync_manager ) {
 			wp_send_json_error( esc_html__( 'Sync manager not available', 'dilux-cloud-storage' ) );
-			return;
 		}
 
 		ConfigManager::set_state( PluginState::CONFIGURED );
@@ -1056,7 +1032,7 @@ class Plugin {
 	 * ⭐ AJAX: Prepare complete resync (clear DB and set state to CONFIGURED)
 	 * The scan + populate will happen automatically when user clicks "Start Sync" (same flow as first sync)
 	 */
-	public function ajax_cs_prepare_resync() {
+	public function ajax_cs_prepare_resync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1086,7 +1062,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Discard failed files (remove from database)
 	 * Removes ALL files with synced=0 (failed files, regardless of error count)
 	 */
-	public function ajax_cs_discard_failed_files() {
+	public function ajax_cs_discard_failed_files(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1129,7 +1105,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Get deletable files stats
 	 * Uses DB-first approach like Infinite Uploads (fast, no filesystem scan)
 	 */
-	public function ajax_cs_get_deletable_stats() {
+	public function ajax_cs_get_deletable_stats(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1169,7 +1145,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Process delete batch (delete ALL local files in batches)
 	 * Uses DB-first approach like Infinite Uploads (faster, no filesystem scan)
 	 */
-	public function ajax_cs_process_delete_batch() {
+	public function ajax_cs_process_delete_batch(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1225,6 +1201,7 @@ class Plugin {
 				if ( file_exists( $file_path ) ) {
 					// wp_delete_file() returns void; we re-check existence to detect success.
 					wp_delete_file( $file_path );
+					clearstatcache( true, $file_path );
 					if ( ! file_exists( $file_path ) ) {
 						++$deleted_total;
 					} else {
@@ -1301,7 +1278,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Take control of sync (for multi-tab coordination)
 	 * Allows an inactive tab to take over the sync from another tab
 	 */
-	public function ajax_cs_take_control() {
+	public function ajax_cs_take_control(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1314,7 +1291,6 @@ class Plugin {
 
 			if ( empty( $new_session_id ) ) {
 				wp_send_json_error( esc_html__( 'Session ID is required', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			// Get current sync metadata
@@ -1322,7 +1298,6 @@ class Plugin {
 
 			if ( empty( $sync_meta ) ) {
 				wp_send_json_error( esc_html__( 'No active sync found', 'dilux-cloud-storage' ) );
-				return;
 			}
 
 			$old_session_id = $sync_meta['sync_session_id'] ?? 'unknown';
@@ -1355,7 +1330,7 @@ class Plugin {
 	 * Returns the current sync state including session info and progress
 	 * Used by inactive tabs to detect if sync is active, inactive, or terminated
 	 */
-	public function ajax_cs_get_sync_state() {
+	public function ajax_cs_get_sync_state(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1393,7 +1368,6 @@ class Plugin {
 						)
 					);
 				}
-				return;
 			}
 
 			$current_session_id = $sync_meta['sync_session_id'] ?? '';
@@ -1417,7 +1391,6 @@ class Plugin {
 						'last_heartbeat_age' => time() - $last_heartbeat,
 					)
 				);
-				return;
 			}
 
 			// Check if sync is terminated (completed, completed_with_errors, or failed)
@@ -1498,7 +1471,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Get failed files count (for Enable Offloading validation)
 	 * Returns count of failed and pending files to validate before enabling offloading
 	 */
-	public function ajax_cs_get_failed_files_count() {
+	public function ajax_cs_get_failed_files_count(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1539,7 +1512,7 @@ class Plugin {
 	/**
 	 * Plugin activation hook
 	 */
-	public static function activate() {
+	public static function activate(): void {
 		Logger::info( '[Dilux Plugin] Activation hook called' );
 
 		// ⭐ Create custom database table for file tracking
@@ -1550,7 +1523,7 @@ class Plugin {
 	/**
 	 * Plugin deactivation hook
 	 */
-	public static function deactivate() {
+	public static function deactivate(): void {
 		Logger::info( '[Dilux Plugin] Deactivation hook called' );
 
 		// Deactivate stream wrapper if active

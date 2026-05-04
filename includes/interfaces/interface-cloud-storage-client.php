@@ -24,17 +24,17 @@ interface CloudStorageClientInterface {
 	/**
 	 * Test connection to cloud storage
 	 *
-	 * @return array ['success' => bool, 'message' => string]
+	 * @return array<string, mixed> ['success' => bool, 'message' => string]
 	 */
 	public function test_connection(): array;
 
 	/**
 	 * Upload a file to cloud storage
 	 *
-	 * @param string $local_path Local file path
-	 * @param string $remote_path Remote path in cloud
-	 * @param array  $options Additional options
-	 * @return array ['success' => bool, 'url' => string, 'error' => string]
+	 * @param string               $local_path Local file path
+	 * @param string               $remote_path Remote path in cloud
+	 * @param array<string, mixed> $options Additional options
+	 * @return array<string, mixed> ['success' => bool, 'url' => string, 'error' => string]
 	 */
 	public function upload_file( string $local_path, string $remote_path, array $options = array() ): array;
 
@@ -43,7 +43,7 @@ interface CloudStorageClientInterface {
 	 *
 	 * @param string $remote_path Remote path in cloud
 	 * @param string $local_path Local destination path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function download_file( string $remote_path, string $local_path ): array;
 
@@ -67,7 +67,7 @@ interface CloudStorageClientInterface {
 	 * Get file information from cloud storage
 	 *
 	 * @param string $remote_path Remote path
-	 * @return array|false File info ['size' => int, 'md5' => string, 'last_modified' => string] or false
+	 * @return array<string, mixed>|false File info ['size' => int, 'md5' => string, 'last_modified' => string] or false
 	 */
 	public function get_file_info( string $remote_path );
 
@@ -75,7 +75,7 @@ interface CloudStorageClientInterface {
 	 * Delete file from cloud storage
 	 *
 	 * @param string $remote_path Remote path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function delete_file( string $remote_path ): array;
 
@@ -85,7 +85,7 @@ interface CloudStorageClientInterface {
 	 *
 	 * @param string $source_path Source remote path
 	 * @param string $dest_path Destination remote path
-	 * @return array ['success' => bool, 'error' => string]
+	 * @return array<string, mixed> ['success' => bool, 'error' => string]
 	 */
 	public function copy_blob( string $source_path, string $dest_path ): array;
 
@@ -93,7 +93,7 @@ interface CloudStorageClientInterface {
 	 * List files in cloud storage directory
 	 *
 	 * @param string $remote_path Remote directory path
-	 * @return array List of files
+	 * @return array<string, mixed> List of files
 	 */
 	public function list_files( string $remote_path = '' ): array;
 
@@ -116,8 +116,8 @@ interface CloudStorageClientInterface {
 	 * Prepare batch upload handle for parallel sync
 	 * Used by SyncManager for optimized parallel uploads
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_batch_upload_handle( array $file_info ): array;
 
@@ -125,8 +125,8 @@ interface CloudStorageClientInterface {
 	 * Prepare chunked upload handle for large files (>10MB)
 	 * Used by SyncManager for optimized chunked uploads
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_chunked_upload_handle( array $file_info ): array;
 
@@ -134,8 +134,8 @@ interface CloudStorageClientInterface {
 	 * Prepare download handle for parallel downloads
 	 * Used by SyncManager for reverse sync (disconnect operation)
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	public function prepare_download_handle( array $file_info ): array;
 }

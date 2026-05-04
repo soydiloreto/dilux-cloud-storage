@@ -49,7 +49,7 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	/**
 	 * Temporary files to cleanup on destruct
 	 *
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected $temp_files_to_cleanup = array();
 
@@ -58,13 +58,20 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	 *
 	 * If file is in diluxcloud://, download to temp first, then load.
 	 *
-	 * @return true|WP_Error True if loaded; WP_Error on failure.
+	 * @return true|\WP_Error True if loaded; \WP_Error on failure.
 	 */
 	public function load() {
-		if ( $this->image instanceof \Imagick ) {
+		// Idempotency guard: parent::load() sets \$this->image to an \Imagick
+		// instance. Skip re-loading if already done. The PHPStan WP stub
+		// types \$image as `\Imagick` (always), so it considers the
+		// instanceof always true and the rest of the body unreachable —
+		// silence both at once with the union ignore.
+		/** @phpstan-ignore-next-line booleanNot.alwaysFalse */
+		if ( ! empty( $this->image ) && $this->image instanceof \Imagick ) {
 			return true;
 		}
 
+		// @phpstan-ignore-next-line deadCode.unreachable
 		Logger::info( '[Dilux Image Editor] load() called for: ' . $this->file );
 
 		if ( ! is_file( $this->file ) && ! preg_match( '|^https?://|', $this->file ) ) {
@@ -118,10 +125,10 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	 * 2. Copy temp to diluxcloud:// (triggers stream wrapper upload to Azure)
 	 * 3. Delete temp
 	 *
-	 * @param Imagick $image Imagick object
-	 * @param string  $filename Output filename
-	 * @param string  $mime_type Output mime type
-	 * @return array|WP_Error Saved file info or error
+	 * @param \Imagick $image Imagick object
+	 * @param string   $filename Output filename
+	 * @param string   $mime_type Output mime type
+	 * @return array<string, mixed>|\WP_Error Saved file info or error
 	 */
 	protected function _save( $image, $filename = null, $mime_type = null ) {
 		list($filename, $extension, $mime_type) = $this->get_output_format( $filename, $mime_type );

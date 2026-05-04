@@ -10,6 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DiluxWP\CloudStorage\ConfigManager;
+
+// Variables populated by Admin::render_tab_content() via extract( $template_data ).
+// Initialise defensively so static analysis sees a definite type and a stray
+// direct include cannot crash on undefined indexes.
+$config = $config ?? array(); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Local template variable populated by extract( $template_data ); not a true global.
 ?>
 
 <div class="dilux-cs-settings">
@@ -54,7 +59,7 @@ use DiluxWP\CloudStorage\ConfigManager;
 						<input type="number"
 								id="max_file_size"
 								name="max_file_size"
-								value="<?php echo esc_attr( round( ( $config['max_file_size'] ?? 20971520 ) / 1048576 ) ); ?>"
+								value="<?php echo esc_attr( (string) round( ( $config['max_file_size'] ?? 20971520 ) / 1048576 ) ); ?>"
 								min="1"
 								max="500"
 								class="small-text">

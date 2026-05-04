@@ -137,7 +137,7 @@ class SyncManager {
 	 *
 	 * @param int $level Number of parallel uploads (3-40)
 	 */
-	public function set_parallel_uploads( $level ) {
+	public function set_parallel_uploads( $level ): void {
 		$level = intval( $level );
 		if ( $level >= 3 && $level <= 40 ) {
 			$this->parallel_uploads = $level;
@@ -192,7 +192,7 @@ class SyncManager {
 	 *
 	 * @param string $message
 	 */
-	private function debug_log( $message ) {
+	private function debug_log( $message ): void {
 		if ( $this->is_debug_enabled() ) {
 			Logger::info( '[Dilux Debug] ' . $message );
 		}
@@ -208,7 +208,7 @@ class SyncManager {
 	 * Scan local files and populate DB (without starting sync)
 	 * Used for calculating files before showing confirmation popup
 	 *
-	 * @return array Result with success status and total_files count
+	 * @return array<string, mixed> Result with success status and total_files count
 	 */
 	public function scan_local_files() {
 		if ( ! $this->cloud_client ) {
@@ -447,7 +447,7 @@ class SyncManager {
 	 * ⭐ NEW: Uses custom DB table + time-based approach (Infinite Uploads style)
 	 *
 	 * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
-	 * @return array Progress information
+	 * @return array<string, mixed> Progress information
 	 */
 	public function process_batch( $time_limit = 8.0 ) {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -593,7 +593,7 @@ class SyncManager {
 	 * Get current sync progress
 	 * ⭐ NEW: Uses custom DB table for stats
 	 *
-	 * @return array|null
+	 * @return array<string, mixed>|null
 	 */
 	public function get_progress() {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -724,7 +724,7 @@ class SyncManager {
 	 * Scan uploads directory for files to sync
 	 *
 	 * @param bool $initial_sync Whether this is an initial sync (optimizes MD5 calculation)
-	 * @return array Array of file information
+	 * @return array<int, array<string, mixed>> Array of file information
 	 */
 	public function scan_files_to_sync( $initial_sync = false ) {
 		$files          = array();
@@ -857,12 +857,13 @@ class SyncManager {
 	 *
 	 * PERFORMANCE BOOST: 10x faster than sequential uploads
 	 *
-	 * @param array $batch Array of file_info arrays
-	 * @return array Array of results ['success' => bool, 'error' => string]
+	 * @param array<int, array<string, mixed>> $batch Array of file_info arrays
+	 * @return array<int, array<string, mixed>> Array of per-file result envelopes
 	 */
 	private function sync_files_parallel( $batch ) {
-		$results = array();
-		$chunks  = array_chunk( $batch, $this->parallel_uploads );
+		$results    = array();
+		$chunk_size = max( 1, $this->parallel_uploads );
+		$chunks     = array_chunk( $batch, $chunk_size );
 
 		foreach ( $chunks as $chunk ) {
 			$chunk_results = $this->upload_chunk_parallel( $chunk );
@@ -876,8 +877,8 @@ class SyncManager {
 	 * Upload a chunk of files in parallel using cURL Multi
 	 * OPTIMIZED: Properly manages file handles for streaming
 	 *
-	 * @param array $files Array of file_info arrays (max $parallel_uploads files)
-	 * @return array Array of results
+	 * @param array<int, array<string, mixed>> $files Array of file_info arrays (max $parallel_uploads files)
+	 * @return array<int, array<string, mixed>> Array of results
 	 */
 	private function upload_chunk_parallel( $files ) {
 		$mh           = curl_multi_init();
@@ -985,8 +986,8 @@ class SyncManager {
 	 * Prepare upload handle (delegates to provider)
 	 * Provider-agnostic method that delegates to cloud storage provider
 	 *
-	 * @param array $file_info File information
-	 * @return array Upload handle data
+	 * @param array<string, mixed> $file_info File information
+	 * @return array<string, mixed> Upload handle data
 	 */
 	private function prepare_upload_handle( $file_info ) {
 		$local_path = $file_info['local_path'];
@@ -1013,12 +1014,13 @@ class SyncManager {
 	/**
 	 * ⭐ NEW: Download files in parallel (same pattern as upload)
 	 *
-	 * @param array $batch Array of file_info arrays
-	 * @return array Array of results
+	 * @param array<int, array<string, mixed>> $batch Array of file_info arrays
+	 * @return array<int, array<string, mixed>> Array of per-file result envelopes
 	 */
 	private function download_files_parallel( $batch ) {
-		$results = array();
-		$chunks  = array_chunk( $batch, $this->parallel_uploads );
+		$results    = array();
+		$chunk_size = max( 1, $this->parallel_uploads );
+		$chunks     = array_chunk( $batch, $chunk_size );
 
 		foreach ( $chunks as $chunk ) {
 			$chunk_results = $this->download_chunk_parallel( $chunk );
@@ -1031,8 +1033,8 @@ class SyncManager {
 	/**
 	 * ⭐ NEW: Download a chunk of files in parallel using cURL Multi
 	 *
-	 * @param array $files Array of file_info arrays (max $parallel_uploads files)
-	 * @return array Array of results
+	 * @param array<int, array<string, mixed>> $files Array of file_info arrays (max $parallel_uploads files)
+	 * @return array<int, array<string, mixed>> Array of results
 	 */
 	private function download_chunk_parallel( $files ) {
 		Logger::info( '[Dilux SyncManager] 🚀 Downloading chunk of ' . count( $files ) . ' files in parallel (concurrency=' . $this->parallel_uploads . ')' );
@@ -1106,8 +1108,8 @@ class SyncManager {
 	 * Prepare a cURL handle for downloading a file from cloud storage
 	 * Delegates to cloud provider implementation
 	 *
-	 * @param array $file_info File information ['local_path' => string, 'remote_path' => string]
-	 * @return array ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
+	 * @param array<string, mixed> $file_info File information ['local_path' => string, 'remote_path' => string]
+	 * @return array<string, mixed> ['success' => bool, 'handle' => resource|null, 'error' => string, 'file_handle' => resource|null]
 	 */
 	private function prepare_download_handle( $file_info ) {
 		// Delegate to cloud provider (Azure, AWS, GCP, etc.)
@@ -1130,49 +1132,11 @@ class SyncManager {
 	 * @param mixed $sync_meta
 	 */
 	/**
-	 * Complete sync using new DB table architecture
-	 * ⭐ NEW: Works with custom DB table
-	 *
-	 * @param mixed $sync_meta
-	 */
-	private function complete_sync_v2( $sync_meta ) {
-		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-		$stats        = DiluxDB::get_stats();
-		$end_time     = time();
-		$elapsed_time = $end_time - $sync_meta['start_time'];
-
-		// Update sync metadata
-		$sync_meta['status']   = 'completed';
-		$sync_meta['end_time'] = $end_time;
-		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
-
-		ConfigManager::set_state( PluginState::SYNCED );
-
-		Logger::info(
-			'[Dilux SyncManager] Sync completed - ' .
-				$stats['synced_files'] . ' successful, ' .
-				$stats['failed_files'] . ' failed, ' .
-				$elapsed_time . ' seconds'
-		);
-
-		return array(
-			'status'             => 'completed',
-			'total_files'        => $stats['total_files'],
-			'processed_files'    => $stats['synced_files'],
-			'successful_uploads' => $stats['synced_files'],
-			'failed_uploads'     => $stats['failed_files'],
-			'elapsed_time'       => $elapsed_time,
-			'percentage'         => 100,
-		);
-	}
-
-	/**
 	 * ⭐ NEW: Compare local files with cloud to detect deleted files
 	 * This should be called AFTER upload sync completes
 	 * Note: Cloud provider list_files() should return all files at once
 	 *
-	 * @return array ['success' => bool, 'cloud_files_found' => int, 'cloud_only_files' => int]
+	 * @return array<string, mixed> ['success' => bool, 'cloud_files_found' => int, 'cloud_only_files' => int]
 	 */
 	public function compare_with_cloud() {
 		if ( ! $this->cloud_client ) {
@@ -1241,7 +1205,7 @@ class SyncManager {
 	 * Used when disconnecting from cloud provider
 	 *
 	 * @param string $mode 'continue' (smart, only missing) or 'scratch' (re-download all)
-	 * @return array ['success' => bool, 'message' => string, 'total_files' => int]
+	 * @return array<string, mixed> ['success' => bool, 'message' => string, 'total_files' => int]
 	 */
 	public function start_reverse_sync( $mode = 'continue' ) {
 		$current_state = ConfigManager::get_state();
@@ -1360,7 +1324,7 @@ class SyncManager {
 				$batch_files   = array();
 
 				foreach ( $cloud_files as $cloud_file ) {
-					$relative_path = str_replace( 'uploads/', '/', $cloud_file['path'] );
+					$relative_path = str_replace( 'uploads/', '/', (string) $cloud_file['path'] );
 
 					// Only mark as deleted if NOT in synced DB files
 					if ( ! isset( $synced_files_in_db[ $relative_path ] ) ) {
@@ -1426,7 +1390,7 @@ class SyncManager {
 	 * ⭐ OPTIMIZED: Uses dynamic batch_size like normal sync
 	 *
 	 * @param float $time_limit Time limit in seconds (default 8s for responsive UI)
-	 * @return array Progress information
+	 * @return array<string, mixed> Progress information
 	 */
 	public function process_reverse_batch( $time_limit = 8.0 ) {
 		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
@@ -1558,95 +1522,6 @@ class SyncManager {
 			'downloaded_this_batch' => $downloaded_this_batch,
 			'pending_files'         => $remaining_deleted,    // ⭐ Legacy name (for SYNC compatibility)
 			'remaining_files'       => $remaining_deleted,   // ⭐ Standard name (for DISCONNECT)
-		);
-	}
-
-	/**
-	 * Complete reverse sync
-	 *
-	 * @param mixed $sync_meta
-	 */
-	private function complete_reverse_sync( $sync_meta ) {
-		require_once DILUX_CS_PLUGIN_DIR . 'includes/class-dilux-db.php';
-
-		$stats        = DiluxDB::get_stats();
-		$end_time     = time();
-		$elapsed_time = $end_time - $sync_meta['start_time'];
-
-		// Update metadata
-		$sync_meta['status']   = 'completed';
-		$sync_meta['end_time'] = $end_time;
-		update_option( 'dilux_cs_sync_meta', $sync_meta, false );
-
-		// ⭐ DON'T change state here - let user decide when to deactivate offloading
-		// State remains OFFLOADING_ACTIVE until user clicks "Deactivate Offloading"
-
-		Logger::info(
-			'[Dilux SyncManager] Reverse sync completed - ' .
-				$stats['synced_files'] . ' downloaded, ' .
-				$stats['failed_files'] . ' failed, ' .
-				$elapsed_time . ' seconds'
-		);
-
-		return array(
-			'status'               => 'completed',
-			'total_files'          => $stats['total_files'],
-			'processed_files'      => $stats['synced_files'],
-			'successful_downloads' => $stats['synced_files'],
-			'failed_downloads'     => $stats['failed_files'],
-			'elapsed_time'         => $elapsed_time,
-			'percentage'           => 100,
-			'message'              => 'Disconnected from cloud provider. Files restored to local storage.',
-		);
-	}
-
-	/**
-	 * Mark the current sync session as complete and persist final stats.
-	 *
-	 * Updates the in-memory progress array with terminal status and
-	 * timestamps, then writes it back via ConfigManager. Caller decides
-	 * what to do with the returned progress envelope.
-	 *
-	 * @param array $progress Current progress envelope to finalize.
-	 * @return array Updated progress envelope with status='completed'.
-	 */
-	private function complete_sync( $progress ) {
-		$progress['status']       = 'completed';
-		$progress['current_file'] = '';
-		$progress['end_time']     = time();
-		$progress['last_update']  = time();
-
-		ConfigManager::save_sync_progress( $progress );
-		ConfigManager::set_state( PluginState::SYNCED );
-
-		$elapsed_time = $progress['end_time'] - $progress['start_time'];
-
-		// PERSIST failed files for manual retry
-		if ( ! empty( $progress['failed_files'] ) ) {
-			ConfigManager::add_failed_files( $progress['failed_files'] );
-			Logger::info( '[Dilux SyncManager] Saved ' . count( $progress['failed_files'] ) . ' failed files for retry' );
-		}
-
-		// OPTIMIZED: Clear file list transient (no longer needed)
-		delete_transient( 'dilux_cs_full_file_list' );
-		Logger::info( '[Dilux SyncManager] Cleared file list transient' );
-
-		Logger::log(
-			'[Dilux SyncManager] Sync completed - ' .
-					$progress['successful_uploads'] . ' successful, ' .
-					$progress['failed_uploads'] . ' failed, ' .
-					$elapsed_time . ' seconds',
-			'info',
-			true
-		);
-
-		return array(
-			'status'             => 'completed',
-			'total_files'        => $progress['total_files'],
-			'successful_uploads' => $progress['successful_uploads'],
-			'failed_uploads'     => $progress['failed_uploads'],
-			'elapsed_time'       => $elapsed_time,
-			'failed_files'       => $progress['failed_files'] ?? array(),
 		);
 	}
 }

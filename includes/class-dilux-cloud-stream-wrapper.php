@@ -4,7 +4,7 @@
  *
  * This file IS a PHP stream wrapper implementation. It must operate at the native
  * filesystem layer (fopen/fread/fwrite/fclose/unlink) on temporary files outside
- * of /wp-content/uploads/, so the WP_Filesystem abstraction cannot be used here.
+ * of /wp-content/uploads/, so the \WP_Filesystem abstraction cannot be used here.
  * Likewise, trigger_error() is required by the stream wrapper protocol so that
  * callers like fopen() can detect errors. These rules are intentionally suppressed
  * file-wide:
@@ -25,6 +25,7 @@
 namespace DiluxWP\CloudStorage;
 
 use DiluxWP\CloudStorage\Enums\PluginState;
+use DiluxWP\CloudStorage\Interfaces\CloudStorageClientInterface;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -44,7 +45,7 @@ class CloudStreamWrapper {
 	/** @var resource Stream context (set by PHP automatically for stream wrappers) */
 	public $context;
 
-	/** @var resource Current file handle */
+	/** @var resource|false|null Current file handle (null before stream_open, false on fopen failure, resource otherwise) */
 	private $handle = null;
 
 	/** @var string Current file path */
@@ -59,13 +60,17 @@ class CloudStreamWrapper {
 	/** @var string File mode (r, w, a, etc.) */
 	private $mode = '';
 
-	/** @var CloudStorageClientInterface */
+	/** @var CloudStorageClientInterface|null */
 	private static $cloud_client = null;
 
-	/** @var array Statistics cache */
+	/**
+	 * @var array<string, mixed> Statistics cache
+	 */
 	private static $stat_cache = array();
 
-	/** @var array File content cache (like Infinite Uploads) */
+	/**
+	 * @var array<string, mixed> File content cache (like Infinite Uploads)
+	 */
 	private static $file_cache = array();
 
 	/** @var int Maximum file size to cache (32MB like Infinite Uploads) */
@@ -75,7 +80,9 @@ class CloudStreamWrapper {
 	 *  served from). Empty string when the plugin is not configured. */
 	private static ?string $cloud_host_cache = null;
 
-	/** @var array Iterator for directory listing */
+	/**
+	 * @var array<string, mixed>|null \Iterator for directory listing
+	 */
 	private $dir_iterator = null;
 
 	/** @var string Current directory path being read */
@@ -223,7 +230,7 @@ class CloudStreamWrapper {
 	 *
 	 * Inspired by Infinite Uploads but improved to cover more cases.
 	 */
-	private static function setup_admin_hooks() {
+	private static function setup_admin_hooks(): void {
 		// Disable cloud offloading during WordPress core, plugin, and theme updates/installations
 		add_action( 'load-update.php', array( __CLASS__, 'tear_down' ) );           // General updates page
 		add_action( 'load-update-core.php', array( __CLASS__, 'tear_down' ) );      // WordPress core updates
@@ -239,7 +246,7 @@ class CloudStreamWrapper {
 	 *
 	 * Called automatically by load-* hooks during admin operations.
 	 */
-	public static function tear_down() {
+	public static function tear_down(): void {
 		remove_filter( 'upload_dir', array( __CLASS__, 'filter_upload_dir' ) );
 		Logger::warning( '[Dilux CloudStreamWrapper] Temporarily disabled upload_dir filter for plugin/theme/core operation' );
 	}
@@ -250,8 +257,8 @@ class CloudStreamWrapper {
 	 * Double protection: this method should not be called during plugin/theme/core
 	 * operations due to tear_down() hooks, but we add a path check as extra safety.
 	 *
-	 * @param array $upload_dir
-	 * @return array
+	 * @param array<string, mixed> $upload_dir
+	 * @return array<string, mixed>
 	 */
 	public static function filter_upload_dir( $upload_dir ) {
 		// Extra safety: Skip filtering if path contains 'upgrade' directory
@@ -484,7 +491,9 @@ class CloudStreamWrapper {
 			if ( $result['success'] ) {
 				// Cache the downloaded content for future reads
 				$content = file_get_contents( $temp_file );
-				$this->cache_set( $this->path, $content );
+				if ( $content !== false ) {
+					$this->cache_set( $this->path, $content );
+				}
 
 				$this->handle = fopen( $temp_file, $mode );
 				return $this->handle !== false;
@@ -500,7 +509,10 @@ class CloudStreamWrapper {
 					$result = $cloud_client->download_file( $this->path, $temp_file );
 
 					if ( $result['success'] ) {
-						$this->content = file_get_contents( $temp_file );
+						$buffer = file_get_contents( $temp_file );
+						if ( $buffer !== false ) {
+							$this->content = $buffer;
+						}
 						unlink( $temp_file );
 					}
 				} catch ( \Exception $e ) {
@@ -523,7 +535,7 @@ class CloudStreamWrapper {
 	 */
 	public function stream_read( $count ) {
 		if ( $this->handle ) {
-			return fread( $this->handle, $count );
+			return $count > 0 ? fread( $this->handle, $count ) : '';
 		}
 
 		// Read from content buffer
@@ -541,7 +553,8 @@ class CloudStreamWrapper {
 	 */
 	public function stream_write( $data ) {
 		if ( $this->handle ) {
-			return fwrite( $this->handle, $data );
+			$written = fwrite( $this->handle, $data );
+			return $written === false ? 0 : $written;
 		}
 
 		// Write to content buffer
@@ -749,14 +762,17 @@ class CloudStreamWrapper {
 	/**
 	 * Stream wrapper: Get file statistics
 	 *
-	 * @return array|false
+	 * @return array<int|string, mixed>|false
 	 */
 	public function stream_stat() {
 		if ( $this->handle ) {
 			return fstat( $this->handle );
 		}
 
-		return $this->url_stat( $this->path, 0 );
+		// No handle (in-memory buffer mode): synthesise a stat-like array
+		// for the in-memory content buffer using format_url_stat() which
+		// emits the same numeric/named-key shape PHP expects.
+		return $this->format_url_stat( array( 'size' => strlen( $this->content ) ) );
 	}
 
 	/**
@@ -769,7 +785,8 @@ class CloudStreamWrapper {
 			return feof( $this->handle );
 		}
 
-		// For write mode (content buffer)
+		// For write mode (content buffer): we are at EOF when the cursor has
+		// reached the end of the buffered content.
 		return $this->position >= strlen( $this->content );
 	}
 
@@ -810,10 +827,11 @@ class CloudStreamWrapper {
 	 */
 	public function stream_tell() {
 		if ( $this->handle ) {
-			return ftell( $this->handle );
+			$pos = ftell( $this->handle );
+			return $pos === false ? 0 : $pos;
 		}
 
-		// For write mode (content buffer)
+		// For write mode (content buffer): the cursor we tracked.
 		return $this->position;
 	}
 
@@ -845,7 +863,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $path
 	 * @param int    $flags
-	 * @return array|false
+	 * @return array<int|string, mixed>|false
 	 */
 	public function url_stat( $path, $flags ) {
 		$parsed_path = $this->parse_path( $path );
@@ -909,7 +927,7 @@ class CloudStreamWrapper {
 	 *
 	 * @param string $path
 	 * @param int    $flags
-	 * @return array|false
+	 * @return array<int|string, mixed>|false
 	 */
 	private function create_stat( $path, $flags ) {
 		$cloud_client = self::get_cloud_client();
@@ -938,9 +956,9 @@ class CloudStreamWrapper {
 	/**
 	 * Trigger error based on flags (copied from Infinite Uploads)
 	 *
-	 * @param string $error
-	 * @param int    $flags
-	 * @return bool|array
+	 * @param string   $error
+	 * @param int|null $flags
+	 * @return false|array<int|string, mixed>
 	 */
 	private function trigger_error_internal( $error, $flags = null ) {
 		// This is triggered with things like file_exists()
@@ -964,7 +982,7 @@ class CloudStreamWrapper {
 	 * Prepare a url_stat result array (copied from Infinite Uploads)
 	 *
 	 * @param mixed $result
-	 * @return array
+	 * @return array<int|string, int>
 	 */
 	private function format_url_stat( $result = null ) {
 		$stat = array(
@@ -1007,6 +1025,13 @@ class CloudStreamWrapper {
 				// Regular file with 0777 access
 				$stat[2]      = 0100777;
 				$stat['mode'] = 0100777;
+				// Apply caller-provided size when present (e.g. in-memory buffer
+				// mode passes the buffered length here so fstat()/filesize()
+				// don't always report 0 bytes for cloud-backed streams).
+				if ( isset( $result['size'] ) && is_int( $result['size'] ) ) {
+					$stat[7]      = $result['size'];
+					$stat['size'] = $result['size'];
+				}
 				break;
 		}
 
@@ -1297,7 +1322,7 @@ class CloudStreamWrapper {
 	/**
 	 * Clear stat cache
 	 */
-	public static function clear_stat_cache() {
+	public static function clear_stat_cache(): void {
 		self::$stat_cache = array();
 	}
 
@@ -1331,7 +1356,7 @@ class CloudStreamWrapper {
 	 * @param string $path File path
 	 * @param string $content File content
 	 */
-	private function cache_set( $path, $content ) {
+	private function cache_set( $path, $content ): void {
 		// Don't cache files that are too big (like Infinite Uploads)
 		if ( strlen( $content ) > self::CACHE_MAX_BYTES ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -1352,7 +1377,7 @@ class CloudStreamWrapper {
 	/**
 	 * Clear file cache
 	 */
-	public static function clear_file_cache() {
+	public static function clear_file_cache(): void {
 		self::$file_cache = array();
 	}
 
@@ -1369,13 +1394,13 @@ class CloudStreamWrapper {
 	 * Called by opendir() - lists blobs with given prefix
 	 * Based on Infinite Uploads dir_opendir() (line 1068)
 	 *
-	 * @param string $path Directory path
-	 * @param int    $options Options
+	 * @param string   $path Directory path
+	 * @param int|null $options Options (null when called via dir_rewinddir)
 	 * @return bool
 	 */
 	public function dir_opendir( $path, $options ) {
-		$this->dirPath   = $this->parse_path( $path );
-		$this->dirPrefix = rtrim( $this->dirPath, '/' ) . '/';
+		$this->dir_path   = $this->parse_path( $path );
+		$this->dir_prefix = rtrim( $this->dir_path, '/' ) . '/';
 
 		$cloud_client = self::get_cloud_client();
 		if ( ! $cloud_client ) {
@@ -1387,10 +1412,10 @@ class CloudStreamWrapper {
 		// Note: Azure doesn't have native "listBlobs with prefix" in our client
 		// For now, we'll create an empty iterator to prevent errors
 		// This is a simplified version - full implementation would require Azure Blob list API
-		$this->dirIterator = array();
+		$this->dir_iterator = array();
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			Logger::info( '[Dilux CloudStreamWrapper] dir_opendir: ' . $this->dirPath );
+			Logger::info( '[Dilux CloudStreamWrapper] dir_opendir: ' . $this->dir_path );
 		}
 
 		return true;
@@ -1406,20 +1431,20 @@ class CloudStreamWrapper {
 	 */
 	public function dir_readdir() {
 		// Check if iterator is valid
-		if ( ! is_array( $this->dirIterator ) || empty( $this->dirIterator ) ) {
+		if ( ! is_array( $this->dir_iterator ) || empty( $this->dir_iterator ) ) {
 			return false;
 		}
 
 		// Get current item and advance
-		$current = array_shift( $this->dirIterator );
+		$current = array_shift( $this->dir_iterator );
 
 		if ( $current === null ) {
 			return false;
 		}
 
 		// Remove prefix to return relative path (like Infinite Uploads does)
-		if ( $this->dirPrefix && strpos( $current, $this->dirPrefix ) === 0 ) {
-			return substr( $current, strlen( $this->dirPrefix ) );
+		if ( $this->dir_prefix && strpos( $current, $this->dir_prefix ) === 0 ) {
+			return substr( $current, strlen( $this->dir_prefix ) );
 		}
 
 		return $current;
@@ -1434,9 +1459,9 @@ class CloudStreamWrapper {
 	 * @return bool
 	 */
 	public function dir_closedir() {
-		$this->dirIterator = null;
-		$this->dirPath     = '';
-		$this->dirPrefix   = '';
+		$this->dir_iterator = null;
+		$this->dir_path     = '';
+		$this->dir_prefix   = '';
 
 		// Force garbage collection like Infinite Uploads does
 		gc_collect_cycles();
@@ -1454,7 +1479,7 @@ class CloudStreamWrapper {
 	 */
 	public function dir_rewinddir() {
 		// Reset by re-opening the directory
-		$this->dirIterator = null;
-		return $this->dir_opendir( $this->dirPath, null );
+		$this->dir_iterator = null;
+		return $this->dir_opendir( $this->dir_path, null );
 	}
 }

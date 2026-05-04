@@ -37,7 +37,7 @@ class Cleanup {
 	/**
 	 * Remove deprecated compression options from database
 	 *
-	 * @return array Results of cleanup operation
+	 * @return array<string, mixed> Results of cleanup operation
 	 */
 	public static function remove_compression_options(): array {
 		$results = array(
@@ -113,7 +113,7 @@ class Cleanup {
 	/**
 	 * Get current config summary (without sensitive data)
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function get_config_summary(): array {
 		$config = get_option( 'dilux_cs_config', array() );
