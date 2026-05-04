@@ -1015,7 +1015,7 @@ class SyncManager {
 	 * ⭐ NEW: Download files in parallel (same pattern as upload)
 	 *
 	 * @param array<int, array<string, mixed>> $batch Array of file_info arrays
-	 * @return array<string, mixed> Array of results
+	 * @return array<int, array<string, mixed>> Array of per-file result envelopes
 	 */
 	private function download_files_parallel( $batch ) {
 		$results    = array();
@@ -1324,7 +1324,7 @@ class SyncManager {
 				$batch_files   = array();
 
 				foreach ( $cloud_files as $cloud_file ) {
-					$relative_path = str_replace( 'uploads/', '/', $cloud_file['path'] );
+					$relative_path = str_replace( 'uploads/', '/', (string) $cloud_file['path'] );
 
 					// Only mark as deleted if NOT in synced DB files
 					if ( ! isset( $synced_files_in_db[ $relative_path ] ) ) {

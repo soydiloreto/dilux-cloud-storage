@@ -66,11 +66,12 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 		// types \$image as `\Imagick` (always), so it considers the
 		// instanceof always true and the rest of the body unreachable —
 		// silence both at once with the union ignore.
-		/** @phpstan-ignore-next-line booleanNot.alwaysFalse, deadCode.unreachable */
+		/** @phpstan-ignore-next-line booleanNot.alwaysFalse */
 		if ( ! empty( $this->image ) && $this->image instanceof \Imagick ) {
 			return true;
 		}
 
+		// @phpstan-ignore-next-line deadCode.unreachable
 		Logger::info( '[Dilux Image Editor] load() called for: ' . $this->file );
 
 		if ( ! is_file( $this->file ) && ! preg_match( '|^https?://|', $this->file ) ) {

@@ -176,6 +176,9 @@ class AzureProvider implements CloudStorageClientInterface {
 
 			$url          = $this->endpoint . '/' . $this->container_name . '/' . $remote_path;
 			$file_content = file_get_contents( $local_path );
+			if ( $file_content === false ) {
+				return UploadResult::failure( 'Could not read local file: ' . $local_path );
+			}
 
 			// ⭐ CRITICAL FIX: Use destination path for MIME type detection (not temp file path)
 			// Temp files from wp_tempnam() have no extension, causing 'application/octet-stream'

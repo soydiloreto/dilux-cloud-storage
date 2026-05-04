@@ -363,7 +363,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 
 			<?php
 			// Pagination
-			$total_pages = ceil( $activity_stats['total_entries'] / $per_page );
+			$total_pages = (int) ceil( (int) $activity_stats['total_entries'] / $per_page );
 			if ( $total_pages > 1 ) :
 				?>
 				<div class="tablenav">
@@ -371,7 +371,7 @@ $date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET[
 						<?php
 						$page_links = paginate_links(
 							array(
-								'base'      => add_query_arg( 'paged', '%#%' ),
+								'base'      => (string) add_query_arg( 'paged', '%#%' ),
 								'format'    => '',
 								'prev_text' => __( '&laquo; Previous', 'dilux-cloud-storage' ),
 								'next_text' => __( 'Next &raquo;', 'dilux-cloud-storage' ),

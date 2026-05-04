@@ -441,7 +441,7 @@ $pending_count   = $template_data['pending_count'] ?? 0;
 								sprintf(
 									/* translators: 1: human-readable disk size (e.g. "200 MB"), 2: number of files */
 									__( 'Free up %1$s of disk space by deleting %2$s local files. Files will continue to be served from cloud storage.', 'dilux-cloud-storage' ),
-									'<strong>' . esc_html( size_format( $stats['deletable_size'] ) ) . '</strong>',
+									'<strong>' . esc_html( (string) size_format( $stats['deletable_size'] ) ) . '</strong>',
 									'<strong>' . esc_html( number_format_i18n( $stats['deletable_files'] ) ) . '</strong>'
 								),
 								array( 'strong' => array() )

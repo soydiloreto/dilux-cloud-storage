@@ -81,7 +81,7 @@ class ConfigManager {
 	/** @var string Option name for connection health status */
 	const HEALTH_OPTION = 'dilux_cs_connection_health';
 
-	/** @var array Default connection health values */
+	/** @var array<string, mixed> Default connection health values */
 	const DEFAULT_HEALTH = array(
 		'status'               => 'unknown',
 		'last_check'           => 0,
@@ -105,7 +105,7 @@ class ConfigManager {
 		'service_account_key', // future GCP
 	);
 
-	/** @var array Default configuration values */
+	/** @var array<string, mixed> Default configuration values */
 	const DEFAULT_CONFIG = array(
 		// Cloud Provider Settings
 		'cloud_provider'           => '',           // azure, aws, gcp
@@ -557,7 +557,7 @@ class ConfigManager {
 	/**
 	 * Save failed files (persistent)
 	 *
-	 * @param array<string, mixed> $failed_files
+	 * @param array<int, mixed> $failed_files List of failed-file entries
 	 * @return bool
 	 */
 	public static function save_failed_files( $failed_files ) {

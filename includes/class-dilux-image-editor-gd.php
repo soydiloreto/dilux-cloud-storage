@@ -124,11 +124,16 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 		if ( strpos( $filename, $upload_dir['basedir'] ) === 0 ) {
 			$temp_filename = tempnam( get_temp_dir(), 'dilux-cloud-storage' );
 		} else {
-			// Not our stream wrapper, use parent directly
+			// Not our stream wrapper, use parent directly.
+			// PHPStan can't resolve \GdImage because the GD extension may not
+			// be loaded in CI; the parent declares GdImage|resource which our
+			// $image satisfies at runtime.
+			// @phpstan-ignore-next-line argument.type
 			return parent::_save( $image, $filename, $mime_type );
 		}
 
 		// Save to temp file first
+		// @phpstan-ignore-next-line argument.type
 		$save = parent::_save( $image, $temp_filename, $mime_type );
 
 		if ( is_wp_error( $save ) ) {
