@@ -22,51 +22,18 @@ User-facing documentation (features, installation, configuration, FAQ) lives in 
 
 This README and the rest of this repository are aimed at developers who want to **contribute, fork, or run the plugin from source**.
 
-## Development setup
-
-The repository ships with a [`@wordpress/env`](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) configuration so any contributor can spin up a fresh WordPress install with the plugin pre-mounted in two commands.
-
-### Prerequisites
-
-- **Docker** (Docker Desktop on macOS/Windows, or Docker Engine on Linux) — running.
-- **Node.js 18+** and **npm**.
-
-### Start the environment
+## Quick start (developers)
 
 ```bash
 git clone https://github.com/soydiloreto/dilux-cloud-storage.git
 cd dilux-cloud-storage
-npm install
-npm run env:start
+make install     # composer install — populate vendor/
+make env         # boots wp-env at http://localhost:8888
 ```
 
-When it finishes, open **http://localhost:8888**. Log in with `admin` / `password`. The plugin is already mounted in `wp-content/plugins/dilux-cloud-storage/` — just activate it from the **Plugins** screen.
+When it finishes, open <http://localhost:8888>. Log in with `admin` / `password`. The plugin is already mounted at `wp-content/plugins/dilux-cloud-storage/` — activate it from the **Plugins** screen.
 
-### Day-to-day commands
-
-| Command | What it does |
-|---------|--------------|
-| `npm run env:start` | Start the local WordPress + MySQL containers. |
-| `npm run env:stop` | Stop the containers (preserves the database). |
-| `npm run env:destroy` | Tear everything down and wipe the local database. Use this if your dev install gets into a bad state. |
-| `npm run env:reset` | `destroy` followed by `start` — fresh install. |
-| `npm run env:cli -- <command>` | Run a `wp-cli` command inside the container. Example: `npm run env:cli -- plugin list`. |
-| `npm run env:logs` | Tail the WordPress container logs (useful when `WP_DEBUG_LOG` writes errors). |
-
-### Configuration
-
-The default environment is configured in [`.wp-env.json`](.wp-env.json):
-
-- **WordPress core**: latest stable.
-- **PHP version**: 8.2.
-- **Plugin**: this repository, auto-mounted.
-- **Debug mode**: `WP_DEBUG`, `WP_DEBUG_LOG`, and `SCRIPT_DEBUG` enabled. `WP_DEBUG_DISPLAY` is off so errors don't render in pages — they go to `wp-content/debug.log` instead.
-
-To override any of these on your local machine without committing the changes, create a `.wp-env.override.json` file (it's already in `.gitignore`). See the [`@wordpress/env` documentation](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) for the full schema.
-
-### Manual install (alternative)
-
-If you prefer your own WordPress setup, you can clone this repo directly into `wp-content/plugins/dilux-cloud-storage/` of your existing WordPress install. The plugin has no build step — it runs straight from source.
+`make help` lists every available target. For the full setup walkthrough, the day-to-day commands, the Docker plumbing, and the `wp-env` configuration, see [`docs/development.md`](docs/development.md).
 
 ## Architecture overview
 
@@ -82,13 +49,32 @@ If you prefer your own WordPress setup, you can clone this repo directly into `w
 | `.github/workflows/` | CI/CD: deploy to wp.org SVN on tag push, plus PR checks. |
 | `.distignore` | List of paths excluded from the wp.org deploy (this README, dev tooling, etc. live in GitHub but are never shipped to wp.org). |
 
+## Documentation
+
+For developers working on the plugin itself:
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — branch naming, PR workflow, commit conventions, coding rules.
+- [`docs/development.md`](docs/development.md) — local dev setup (`wp-env`, Docker, Make targets).
+- [`docs/testing-and-quality.md`](docs/testing-and-quality.md) — PHPUnit, PHPCS, PHPStan, Psalm, i18n. What each layer enforces and how to run it.
+- [`docs/ai-tooling.md`](docs/ai-tooling.md) — what AI tooling the project uses (Copilot Code Review and friends), what it costs, and what it's configured to enforce.
+- [`docs/ai-policy.md`](docs/ai-policy.md) — rules for contributors using AI agents to author code.
+- [`docs/release.md`](docs/release.md) — version bump flow, the `-dev` suffix convention, the wp.org SVN deploy.
+
 ## Contributing
 
-Contributions are welcome — bug reports, feature requests, and pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, PR workflow, and coding conventions.
+Contributions are welcome — bug reports, feature requests, and pull requests. See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
 
 ## Reporting security issues
 
 ⚠️ **Please do not open public issues for security vulnerabilities.** See [SECURITY.md](SECURITY.md) for the private reporting process via GitHub Security Advisories.
+
+## About
+
+This plugin is **free and open-source software** under the GPL-2.0-or-later licence — that includes the cloud-offloading code, the stream wrapper, the admin UI, every test, every CI workflow.
+
+It was created and is currently maintained by **Pablo Diloreto** ([@soydiloreto](https://github.com/soydiloreto)). Contributions, issues, and forks are all welcome.
+
+The plugin ships with two cloud-storage backends: a generic **Azure Blob Storage** integration that you can point at any Azure account you control, and an integration with **Dilux One Cloud**, a paid managed offering. Both backends use the same plugin code and the same stream wrapper — using the Dilux One backend is one option among several; the plugin is fully usable end-to-end with Azure (or any future provider) and never disables features behind a paywall. The whole point of writing this open is so that it isn't necessary to use any specific backend.
 
 ## License
 

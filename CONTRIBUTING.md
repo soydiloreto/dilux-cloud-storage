@@ -53,15 +53,26 @@ The body explains the *why* — context, motivation, alternatives considered. Wr
 
 ## Coding conventions
 
-For now: **follow the style of the surrounding code.** A formal linter configuration (PHP_CodeSniffer with WordPress Coding Standards) will be introduced in a later iteration; until then, consistency with existing files is the rule.
+The project enforces a strict quality stack on every PR. Run `make check` locally before pushing — it runs the same gates CI does.
 
-A few hard rules:
+| Gate | Tool | Make target |
+| --- | --- | --- |
+| Code style | PHP_CodeSniffer + WordPress Coding Standards (full ruleset, no relaxations) | `make lint` (auto-fix: `make lint-fix`) |
+| Static analysis | PHPStan level 8, no baseline | `make stan` |
+| Security taint analysis | Psalm in taint-only mode (XSS, SQLi, RCE) | `make psalm` |
+| i18n | `wp i18n make-pot` + warning-grep | `make i18n` |
+| Unit tests | PHPUnit + brain/monkey + mockery | `make test` |
+| Integration tests | PHPUnit against `wp-env` | `make test-integration` |
 
-- **PHP 7.4+** is the minimum supported version. Do not use syntax or functions added in later versions without a fallback.
-- **No hard dependencies on Composer packages** in the runtime path. The plugin must run on a fresh WordPress install with no extra setup.
-- **All user-facing strings** must be wrapped in WordPress translation functions (`__()`, `_e()`, `_n()`, etc.) with the text domain `dilux-cloud-storage`.
-- **All user input** must be sanitized (`sanitize_text_field`, `wp_kses`, etc.) and all output must be escaped (`esc_html`, `esc_attr`, `esc_url`).
-- **Never log credentials.** API keys, access keys, and decrypted secrets must not appear in `error_log` even when debug mode is on.
+See [`docs/testing-and-quality.md`](docs/testing-and-quality.md) for what each layer enforces and the configuration files that drive it.
+
+A few hard rules the linters can't fully express:
+
+- **PHP 7.4+** is the minimum supported version. Do not use syntax or functions added in later versions without a fallback. (PHPCS's PHPCompatibility ruleset catches most of this.)
+- **No hard dependencies on Composer packages** in the runtime path. The plugin must run on a fresh WordPress install with no extra setup. `composer install` produces only dev tooling — `vendor/` never ships to wp.org.
+- **All user-facing strings** must be wrapped in WordPress translation functions (`__()`, `_e()`, `_n()`, etc.) with the text domain `dilux-cloud-storage`. `sprintf()` placeholders need a `/* translators: */` comment **on the line immediately preceding** the translation call (a blank line in between makes the comment invisible to gettext).
+- **All user input** must be sanitised (`sanitize_text_field`, `wp_kses`, etc.) and all output must be escaped (`esc_html`, `esc_attr`, `esc_url`). Psalm taint analysis enforces this for the obvious sinks; PHPCS catches the rest.
+- **Never log credentials.** API keys, access keys, and decrypted secrets must not appear in `error_log` even when debug mode is on. PHPStan can't catch this — be deliberate.
 
 ## Versioning
 
@@ -130,6 +141,10 @@ Release flow is documented for maintainers. Briefly:
 5. After the release lands on wp.org, the maintainer opens another PR
    that bumps `Version:` to `1.3.0-dev` (or whatever the next intended
    release is) so `main` reflects "in development" again.
+
+## AI-assisted contributions
+
+If you use Copilot, Claude, GPT, Cursor, or any other AI tool to help write code, read [`docs/ai-policy.md`](docs/ai-policy.md) before opening a PR. The summary: use any tool you want, but you sign the commit and you own the code — every line, every test, every behaviour. The model isn't going to answer the bug report.
 
 ## Code of Conduct
 
