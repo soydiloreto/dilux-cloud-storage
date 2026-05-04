@@ -857,12 +857,13 @@ class SyncManager {
 	 *
 	 * PERFORMANCE BOOST: 10x faster than sequential uploads
 	 *
-	 * @param array<string, mixed> $batch Array of file_info arrays
+	 * @param array<int, array<string, mixed>> $batch Array of file_info arrays
 	 * @return array<string, mixed> Array of results ['success' => bool, 'error' => string]
 	 */
 	private function sync_files_parallel( $batch ) {
-		$results = array();
-		$chunks  = array_chunk( $batch, $this->parallel_uploads );
+		$results    = array();
+		$chunk_size = max( 1, $this->parallel_uploads );
+		$chunks     = array_chunk( $batch, $chunk_size );
 
 		foreach ( $chunks as $chunk ) {
 			$chunk_results = $this->upload_chunk_parallel( $chunk );
@@ -876,7 +877,7 @@ class SyncManager {
 	 * Upload a chunk of files in parallel using cURL Multi
 	 * OPTIMIZED: Properly manages file handles for streaming
 	 *
-	 * @param array<string, mixed> $files Array of file_info arrays (max $parallel_uploads files)
+	 * @param array<int, array<string, mixed>> $files Array of file_info arrays (max $parallel_uploads files)
 	 * @return array<string, mixed> Array of results
 	 */
 	private function upload_chunk_parallel( $files ) {
@@ -1013,12 +1014,13 @@ class SyncManager {
 	/**
 	 * ⭐ NEW: Download files in parallel (same pattern as upload)
 	 *
-	 * @param array<string, mixed> $batch Array of file_info arrays
+	 * @param array<int, array<string, mixed>> $batch Array of file_info arrays
 	 * @return array<string, mixed> Array of results
 	 */
 	private function download_files_parallel( $batch ) {
-		$results = array();
-		$chunks  = array_chunk( $batch, $this->parallel_uploads );
+		$results    = array();
+		$chunk_size = max( 1, $this->parallel_uploads );
+		$chunks     = array_chunk( $batch, $chunk_size );
 
 		foreach ( $chunks as $chunk ) {
 			$chunk_results = $this->download_chunk_parallel( $chunk );
@@ -1031,7 +1033,7 @@ class SyncManager {
 	/**
 	 * ⭐ NEW: Download a chunk of files in parallel using cURL Multi
 	 *
-	 * @param array<string, mixed> $files Array of file_info arrays (max $parallel_uploads files)
+	 * @param array<int, array<string, mixed>> $files Array of file_info arrays (max $parallel_uploads files)
 	 * @return array<string, mixed> Array of results
 	 */
 	private function download_chunk_parallel( $files ) {

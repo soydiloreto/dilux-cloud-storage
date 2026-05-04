@@ -592,7 +592,7 @@ class DiluxDB {
 	/**
 	 * Add multiple cloud-only files in batch
 	 *
-	 * @param array<string, mixed> $files Array of ['path' => string, 'size' => int]
+	 * @param array<int, array<string, mixed>> $files Array of ['path' => string, 'size' => int]
 	 */
 	public static function add_cloud_only_files_batch( $files ): bool {
 		global $wpdb;
