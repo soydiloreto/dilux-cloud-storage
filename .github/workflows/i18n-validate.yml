@@ -1,0 +1,74 @@
+name: i18n validation
+
+# Validates the plugin's translation strings: extracts a .pot via
+# `wp i18n make-pot --strict` (which fails on any extraction warning,
+# e.g. missing translator comments on sprintf placeholders, dynamic
+# text domains, or concat of translatable parts) and verifies the
+# generated file is non-empty.
+#
+# WordPress Plugin Check (.github/workflows/pr-checks.yml) already
+# enforces a subset of i18n rules at PHPCS time. This workflow adds
+# the WP-CLI i18n linter, which catches a different (and overlapping)
+# set of issues — together they form a fairly tight i18n net.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  i18n:
+    name: WP-CLI i18n make-pot (strict)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2, wp-cli
+
+      - name: Run wp i18n make-pot (strict)
+        # --strict: fail on any warning during string extraction.
+        # --exclude: skip dev/test/vendor directories — only validate
+        #   the code that actually ships in the wp.org plugin.
+        run: |
+          mkdir -p build
+          wp i18n make-pot . build/dilux-cloud-storage.pot \
+            --slug=dilux-cloud-storage \
+            --domain=dilux-cloud-storage \
+            --strict \
+            --skip-audit=false \
+            --exclude=tests,vendor,node_modules,.wordpress-org,assets,docs,build
+
+      - name: Verify .pot is non-empty
+        # An empty .pot is a strong sign the extraction misfired (e.g.
+        # the WP-CLI scanner ignored every PHP file in the project).
+        run: |
+          set -e
+          POT_FILE=build/dilux-cloud-storage.pot
+          if [ ! -s "$POT_FILE" ]; then
+            echo "::error::POT file is missing or empty: $POT_FILE"
+            exit 1
+          fi
+          MSGID_COUNT=$(grep -c '^msgid "' "$POT_FILE" || true)
+          echo "Extracted $MSGID_COUNT msgid entries."
+          # Header counts as one msgid; require >1 so we know real
+          # strings were extracted.
+          if [ "$MSGID_COUNT" -le 1 ]; then
+            echo "::error::POT file extracted no translatable strings."
+            exit 1
+          fi
+
+      - name: Upload .pot artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dilux-cloud-storage-pot
+          path: build/dilux-cloud-storage.pot
+          retention-days: 14
