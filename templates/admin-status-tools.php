@@ -154,7 +154,7 @@ $section = $section ?? 'status';
 							<span class="status-indicator" style="background:#dba617;"></span>
 							<?php
 							printf(
-								/* translators: %s: short reason, e.g. "permission denied" */
+								/* translators: %s: short reason for the pause */
 								esc_html__( 'Paused (%s)', 'dilux-cloud-storage' ),
 								esc_html( $pause_label )
 							);
@@ -206,7 +206,7 @@ $section = $section ?? 'status';
 							<span class="status-indicator" style="background:#dba617;"></span>
 							<?php
 							printf(
-								/* translators: %s: short reason, e.g. "credentials unreadable" */
+								/* translators: %s: short reason for the pause */
 								esc_html__( 'Paused (%s)', 'dilux-cloud-storage' ),
 								esc_html( $pause_label )
 							);
