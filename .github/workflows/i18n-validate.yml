@@ -1,10 +1,11 @@
 name: i18n validation
 
 # Validates the plugin's translation strings: extracts a .pot via
-# `wp i18n make-pot --strict` (which fails on any extraction warning,
-# e.g. missing translator comments on sprintf placeholders, dynamic
-# text domains, or concat of translatable parts) and verifies the
-# generated file is non-empty.
+# `wp i18n make-pot`, captures the output, and fails the build if any
+# "Warning:" or "Error:" lines appear (e.g. missing translator
+# comments on sprintf placeholders, dynamic text domains, concat of
+# translatable parts). Then sanity-checks that the generated file is
+# non-empty.
 #
 # WordPress Plugin Check (.github/workflows/pr-checks.yml) already
 # enforces a subset of i18n rules at PHPCS time. This workflow adds
@@ -19,7 +20,7 @@ on:
 
 jobs:
   i18n:
-    name: WP-CLI i18n make-pot (strict)
+    name: WP-CLI i18n make-pot
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -34,18 +35,43 @@ jobs:
           coverage: none
           tools: composer:v2, wp-cli
 
-      - name: Run wp i18n make-pot (strict)
-        # --strict: fail on any warning during string extraction.
+      - name: Run wp i18n make-pot
+        id: makepot
         # --exclude: skip dev/test/vendor directories — only validate
         #   the code that actually ships in the wp.org plugin.
+        # We capture all output so the next step can decide whether
+        # warnings fail the build (WP-CLI itself does not have a
+        # `--strict` flag — extraction warnings print to stderr but
+        # don't change the exit code).
         run: |
           mkdir -p build
-          wp i18n make-pot . build/dilux-cloud-storage.pot \
+          set +e
+          OUTPUT=$(wp i18n make-pot . build/dilux-cloud-storage.pot \
             --slug=dilux-cloud-storage \
             --domain=dilux-cloud-storage \
-            --strict \
-            --skip-audit=false \
-            --exclude=tests,vendor,node_modules,.wordpress-org,assets,docs,build
+            --exclude=tests,vendor,node_modules,.wordpress-org,assets,docs,build 2>&1)
+          STATUS=$?
+          echo "$OUTPUT"
+          {
+            echo 'output<<EOF_DELIM'
+            echo "$OUTPUT"
+            echo 'EOF_DELIM'
+          } >> "$GITHUB_OUTPUT"
+          exit "$STATUS"
+
+      - name: Fail on extraction warnings
+        # Any "Warning:" line in `wp i18n make-pot` output indicates a
+        # missing translator comment, dynamic text domain, concat'd
+        # translatable strings, or similar — all real i18n bugs that
+        # WP-CLI prints but does not exit non-zero on.
+        env:
+          MAKEPOT_OUTPUT: ${{ steps.makepot.outputs.output }}
+        run: |
+          if printf '%s\n' "$MAKEPOT_OUTPUT" | grep -E '^(Warning|Error):' >&2; then
+            echo "::error::wp i18n make-pot reported warnings/errors above."
+            exit 1
+          fi
+          echo "No i18n extraction warnings."
 
       - name: Verify .pot is non-empty
         # An empty .pot is a strong sign the extraction misfired (e.g.
