@@ -38,7 +38,7 @@ class SyncProgress {
 	/** @var int */
 	private int $lastUpdate;
 	/**
-	 * @var array<string, mixed>
+	 * @var array<int, string>
 	 */
 	private array $errors;
 
@@ -52,7 +52,7 @@ class SyncProgress {
 	 * @param int    $failedUploads
 	 * @param int    $startTime
 	 * @param int    $lastUpdate
-	 * @param array<string, mixed>  $errors
+	 * @param array<int, string>  $errors
 	 *
 	 * @throws \InvalidArgumentException When status is not a valid SyncStatus value or counts are negative.
 	 */
@@ -184,7 +184,7 @@ class SyncProgress {
 	/**
 	 * Get errors
 	 *
-	 * @return array<string, mixed>
+	 * @return array<int, string>
 	 */
 	public function getErrors(): array {
 		return $this->errors;

@@ -38,7 +38,7 @@ class SyncResult {
 	/** @var int */
 	private int $duration;
 	/**
-	 * @var array<string, mixed>
+	 * @var array<int, string>
 	 */
 	private array $errors;
 	/**
@@ -56,7 +56,7 @@ class SyncResult {
 	 * @param int    $failedUploads
 	 * @param int    $skippedFiles
 	 * @param int    $duration
-	 * @param array<string, mixed>  $errors
+	 * @param array<int, string>  $errors
 	 * @param array<string, mixed>  $statistics
 	 */
 	public function __construct(
