@@ -139,7 +139,7 @@ Requirements: PHP `ext-openssl` (enabled by default on virtually every host).
 == Upgrade Notice ==
 
 = 1.1.0 =
-* Consolidated release with admin-paused-state UX coherence and decrypt-failure handling. Plus internal CI/quality tooling (no runtime changes from that side).
+* Clearer error messages when the plugin cannot read your cloud credentials (for example after restoring the site database from another environment). The Cloud Provider, Sync, Status and Overview tabs now show the same paused state with specific guidance — previously some panels stayed green or showed contradictory information.
 
 = 1.0.0 =
 * Initial release.
