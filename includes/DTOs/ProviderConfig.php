@@ -31,8 +31,8 @@ class ProviderConfig {
 	/**
 	 * Constructor
 	 *
-	 * @param string $cloudProvider Provider name (azure, aws, gcp)
-	 * @param array<string, mixed>  $providerConfig Provider-specific configuration
+	 * @param string               $cloudProvider Provider name (azure, aws, gcp)
+	 * @param array<string, mixed> $providerConfig Provider-specific configuration
 	 */
 	public function __construct(
 		string $cloudProvider = '',

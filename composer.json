@@ -39,7 +39,7 @@
         "test:unit": "phpunit --testsuite unit",
         "lint": "phpcs",
         "lint:fix": "phpcbf",
-        "stan": "phpstan analyse --memory-limit=512M"
+        "stan": "phpstan analyse --memory-limit=2G"
     },
     "scripts-descriptions": {
         "test": "Run all PHPUnit suites.",

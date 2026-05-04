@@ -1524,5 +1524,4 @@ class SyncManager {
 			'remaining_files'       => $remaining_deleted,   // ⭐ Standard name (for DISCONNECT)
 		);
 	}
-
 }

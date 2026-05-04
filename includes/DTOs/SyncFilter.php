@@ -37,11 +37,11 @@ class SyncFilter {
 	/**
 	 * Constructor
 	 *
-	 * @param string $allowedFileTypes Comma-separated extensions or '*' for all
-	 * @param int    $maxFileSize Maximum file size in bytes (0 = no limit)
-	 * @param array<string, mixed>  $excludedPaths Array of paths/patterns to exclude
-	 * @param bool   $includeHiddenFiles Whether to include files starting with '.'
-	 * @param bool   $includeSystemFiles Whether to include system files (.htaccess, index.php, etc.)
+	 * @param string               $allowedFileTypes Comma-separated extensions or '*' for all
+	 * @param int                  $maxFileSize Maximum file size in bytes (0 = no limit)
+	 * @param array<string, mixed> $excludedPaths Array of paths/patterns to exclude
+	 * @param bool                 $includeHiddenFiles Whether to include files starting with '.'
+	 * @param bool                 $includeSystemFiles Whether to include system files (.htaccess, index.php, etc.)
 	 *
 	 * @throws \InvalidArgumentException When maxFileSize is negative.
 	 */

@@ -666,8 +666,8 @@ class ConfigManager {
 	/**
 	 * Validate provider-specific configuration
 	 *
-	 * @param string $provider
-	 * @param array<string, mixed>  $provider_config
+	 * @param string               $provider
+	 * @param array<string, mixed> $provider_config
 	 * @return bool
 	 */
 	private static function validate_provider_config( $provider, $provider_config ) {

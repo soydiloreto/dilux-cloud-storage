@@ -25,8 +25,8 @@ class CloudStorageFactory {
 	/**
 	 * Create cloud storage client instance
 	 *
-	 * @param string $provider Provider name (azure, aws, etc.)
-	 * @param array<string, mixed>  $config Configuration array
+	 * @param string               $provider Provider name (azure, aws, etc.)
+	 * @param array<string, mixed> $config Configuration array
 	 * @return CloudStorageClientInterface|null
 	 * @throws \Exception When the provider name is not supported or not yet implemented.
 	 */

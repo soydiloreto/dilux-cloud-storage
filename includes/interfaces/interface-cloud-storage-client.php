@@ -31,9 +31,9 @@ interface CloudStorageClientInterface {
 	/**
 	 * Upload a file to cloud storage
 	 *
-	 * @param string $local_path Local file path
-	 * @param string $remote_path Remote path in cloud
-	 * @param array<string, mixed>  $options Additional options
+	 * @param string               $local_path Local file path
+	 * @param string               $remote_path Remote path in cloud
+	 * @param array<string, mixed> $options Additional options
 	 * @return array<string, mixed> ['success' => bool, 'url' => string, 'error' => string]
 	 */
 	public function upload_file( string $local_path, string $remote_path, array $options = array() ): array;

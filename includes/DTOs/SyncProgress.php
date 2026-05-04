@@ -45,14 +45,14 @@ class SyncProgress {
 	/**
 	 * Constructor
 	 *
-	 * @param string $status
-	 * @param int    $totalFiles
-	 * @param int    $processedFiles
-	 * @param int    $successfulUploads
-	 * @param int    $failedUploads
-	 * @param int    $startTime
-	 * @param int    $lastUpdate
-	 * @param array<int, string>  $errors
+	 * @param string             $status
+	 * @param int                $totalFiles
+	 * @param int                $processedFiles
+	 * @param int                $successfulUploads
+	 * @param int                $failedUploads
+	 * @param int                $startTime
+	 * @param int                $lastUpdate
+	 * @param array<int, string> $errors
 	 *
 	 * @throws \InvalidArgumentException When status is not a valid SyncStatus value or counts are negative.
 	 */

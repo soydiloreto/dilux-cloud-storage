@@ -126,8 +126,8 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	 * 3. Delete temp
 	 *
 	 * @param \Imagick $image Imagick object
-	 * @param string  $filename Output filename
-	 * @param string  $mime_type Output mime type
+	 * @param string   $filename Output filename
+	 * @param string   $mime_type Output mime type
 	 * @return array<string, mixed>|\WP_Error Saved file info or error
 	 */
 	protected function _save( $image, $filename = null, $mime_type = null ) {

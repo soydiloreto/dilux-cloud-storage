@@ -106,9 +106,9 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	 * 2. Copy temp to diluxcloud:// (triggers stream wrapper upload to Azure)
 	 * 3. Delete temp
 	 *
-	 * @param resource|object  $image GD image (resource on PHP 7, \GdImage on PHP 8+)
-	 * @param string           $filename Output filename
-	 * @param string           $mime_type Output mime type
+	 * @param resource|object $image GD image (resource on PHP 7, \GdImage on PHP 8+)
+	 * @param string          $filename Output filename
+	 * @param string          $mime_type Output mime type
 	 * @return array<string, mixed>|\WP_Error Saved file info or error
 	 */
 	protected function _save( $image, $filename = null, $mime_type = null ) {

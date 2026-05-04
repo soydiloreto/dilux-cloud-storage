@@ -14,7 +14,7 @@ use DiluxWP\CloudStorage\ConfigManager;
 // Variables populated by Admin::render_tab_content() via extract( $template_data ).
 // Initialise defensively so static analysis sees a definite type and a stray
 // direct include cannot crash on undefined indexes.
-$config = $config ?? array();
+$config = $config ?? array(); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Local template variable populated by extract( $template_data ); not a true global.
 ?>
 
 <div class="dilux-cs-settings">

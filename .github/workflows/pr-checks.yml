@@ -62,7 +62,7 @@ jobs:
           # localhost references, etc.) are false positives for our setup.
           # Mirror this list with .distignore to keep the two in sync.
           exclude-directories: tests,vendor,node_modules,docs
-          exclude-files: phpunit.xml.dist,phpunit.xml,phpunit-integration.xml,phpunit-integration.xml.dist,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,psalm.xml,psalm.xml.dist,psalm-baseline.xml
+          exclude-files: phpunit.xml.dist,phpunit.xml,phpunit-integration.xml,phpunit-integration.xml.dist,composer.json,composer.lock,package.json,package-lock.json,Makefile,phpcs.xml,phpcs.xml.dist,phpstan.neon,phpstan.neon.dist,phpstan-baseline.neon,phpstan-bootstrap.php,psalm.xml,psalm.xml.dist,psalm-baseline.xml
           # Codes that flag GitHub-only repo metadata. These are not real
           # plugin issues — they only fire because Plugin Check scans the
           # repo tree, not the deployed zip.

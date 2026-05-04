@@ -49,15 +49,15 @@ class SyncResult {
 	/**
 	 * Constructor
 	 *
-	 * @param bool   $success
-	 * @param string $status
-	 * @param int    $totalFiles
-	 * @param int    $successfulUploads
-	 * @param int    $failedUploads
-	 * @param int    $skippedFiles
-	 * @param int    $duration
-	 * @param array<int, string>  $errors
-	 * @param array<string, mixed>  $statistics
+	 * @param bool                 $success
+	 * @param string               $status
+	 * @param int                  $totalFiles
+	 * @param int                  $successfulUploads
+	 * @param int                  $failedUploads
+	 * @param int                  $skippedFiles
+	 * @param int                  $duration
+	 * @param array<int, string>   $errors
+	 * @param array<string, mixed> $statistics
 	 */
 	public function __construct(
 		bool $success,
@@ -84,9 +84,9 @@ class SyncResult {
 	/**
 	 * Create successful result
 	 *
-	 * @param int   $totalFiles
-	 * @param int   $successfulUploads
-	 * @param int   $duration
+	 * @param int                  $totalFiles
+	 * @param int                  $successfulUploads
+	 * @param int                  $duration
 	 * @param array<string, mixed> $statistics
 	 * @return self
 	 */
