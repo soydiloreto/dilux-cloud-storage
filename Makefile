@@ -1,12 +1,11 @@
 # dilux-cloud-storage — developer task runner.
 #
 # All PHP-based commands run inside the official `composer:2` Docker
-# image. That keeps the host clean of plugin-specific PHP extensions
-# (dom, mbstring, xml, xmlwriter, etc.) and matches what GitHub
-# Actions runs in CI: same composer, same vendor dir, same lockfile.
-#
-# WP-CLI (used by the i18n target and wp-env) ships with the
-# `wordpress:cli` image, so we wire that one up too.
+# image by default. That keeps the host clean of plugin-specific PHP
+# extensions (dom, mbstring, xml, xmlwriter, etc.) which the standard
+# WSL `php-cli` build tends to lack. The Composer + dev-tooling
+# versions still come from composer.lock either way, so the runtime
+# difference vs CI is just the PHP-extension surface area.
 #
 # Usage:
 #   make            # = make help
@@ -14,8 +13,10 @@
 #   make check      # everything CI runs
 #   make release    # check + version-alignment dry-run
 #
-# Override DOCKER=0 to invoke local binaries instead (only viable on
-# hosts that have a full PHP CLI with the required extensions).
+# Override DOCKER=0 to invoke local binaries instead. Only viable on
+# hosts that already have a full PHP CLI with the required extensions
+# (dom, mbstring, xml, xmlwriter, libxml, openssl, json, fileinfo,
+# tokenizer) and `wp` and `npx` available on $PATH.
 
 SHELL := /bin/bash
 
@@ -24,24 +25,33 @@ SHELL := /bin/bash
 # composer doesn't leave root-owned files in vendor/.
 DOCKER ?= 1
 DOCKER_USER := $(shell id -u):$(shell id -g)
-DOCKER_RUN := docker run --rm -u $(DOCKER_USER) -v $(CURDIR):/app -w /app
-COMPOSER_IMAGE := composer:2
-WP_CLI_IMAGE   := wordpress:cli
-PHP_IMAGE      := php:8.3-cli
+DOCKER_RUN  := docker run --rm -u $(DOCKER_USER) -v $(CURDIR):/app -w /app
+
+# Pin floating tags via env override for reproducibility:
+#   make stan COMPOSER_IMAGE=composer:2.7
+COMPOSER_IMAGE ?= composer:2
+WP_CLI_IMAGE   ?= wordpress:cli
+PHP_IMAGE      ?= php:8.3-cli
+
+# `--network host` lets the wordpress:cli container reach the wp-env
+# MySQL on the same host. It is unsupported on Docker Desktop for
+# macOS/Windows; on those hosts override DOCKER_NET= to drop it (and
+# arrange WP-CLI / integration tests another way, e.g. via wp-env).
+DOCKER_NET ?= --network host
 
 ifeq ($(DOCKER),1)
-PHP        := $(DOCKER_RUN) $(COMPOSER_IMAGE) php
-COMPOSER   := $(DOCKER_RUN) $(COMPOSER_IMAGE) composer
-WP_CLI     := $(DOCKER_RUN) --network host $(WP_CLI_IMAGE)
-PSALM_PHP  := $(DOCKER_RUN) $(PHP_IMAGE)
+COMPOSER  := $(DOCKER_RUN) $(COMPOSER_IMAGE) composer
+VENDOR    := $(DOCKER_RUN) $(COMPOSER_IMAGE)
+PSALM_CMD := $(DOCKER_RUN) $(PHP_IMAGE) ./vendor/bin/psalm
+WP_CLI    := $(DOCKER_RUN) $(DOCKER_NET) $(WP_CLI_IMAGE)
+INTEG     := $(DOCKER_RUN) $(DOCKER_NET) $(COMPOSER_IMAGE)
 else
-PHP        := php
-COMPOSER   := composer
-WP_CLI     := wp
-PSALM_PHP  :=
+COMPOSER  := composer
+VENDOR    :=
+PSALM_CMD := ./vendor/bin/psalm
+WP_CLI    := wp
+INTEG     :=
 endif
-
-VENDOR_BIN := ./vendor/bin
 
 # -- Default target ----------------------------------------------------
 .DEFAULT_GOAL := help
@@ -66,24 +76,24 @@ update: ## Update dev dependencies (composer update).
 # -- Linting / static analysis ----------------------------------------
 .PHONY: lint
 lint: ## PHPCS + WordPress Coding Standards.
-	$(DOCKER_RUN) $(COMPOSER_IMAGE) $(VENDOR_BIN)/phpcs
+	$(VENDOR) ./vendor/bin/phpcs
 
 .PHONY: lint-fix
 lint-fix: ## Auto-fix PHPCS violations where possible.
-	$(DOCKER_RUN) $(COMPOSER_IMAGE) $(VENDOR_BIN)/phpcbf
+	$(VENDOR) ./vendor/bin/phpcbf
 
 .PHONY: stan
 stan: ## PHPStan level 8 (no baseline).
-	$(DOCKER_RUN) $(COMPOSER_IMAGE) $(VENDOR_BIN)/phpstan analyse --memory-limit=2G --no-progress
+	$(VENDOR) ./vendor/bin/phpstan analyse --memory-limit=2G --no-progress
 
 .PHONY: psalm
 psalm: ## Psalm taint analysis (XSS / SQLi / RCE).
-	$(PSALM_PHP) $(VENDOR_BIN)/psalm --taint-analysis --no-cache --no-progress
+	$(PSALM_CMD) --taint-analysis --no-cache --no-progress
 
 .PHONY: i18n
 i18n: ## Generate dilux-cloud-storage.pot via WP-CLI.
 	mkdir -p build
-	$(WP_CLI) wp i18n make-pot . build/dilux-cloud-storage.pot \
+	$(WP_CLI) i18n make-pot . build/dilux-cloud-storage.pot \
 	    --slug=dilux-cloud-storage \
 	    --domain=dilux-cloud-storage \
 	    --exclude=tests,vendor,node_modules,.wordpress-org,assets,docs,build
@@ -94,11 +104,11 @@ test: test-unit ## Run the unit-test suite (default — fast, no WP needed).
 
 .PHONY: test-unit
 test-unit: ## Run only the unit-test suite (no WordPress runtime).
-	$(DOCKER_RUN) $(COMPOSER_IMAGE) $(VENDOR_BIN)/phpunit --testsuite unit
+	$(VENDOR) ./vendor/bin/phpunit --testsuite unit
 
 .PHONY: test-integration
 test-integration: ## Run integration tests against the wp-env stack (must be `make env` first).
-	$(DOCKER_RUN) --network host $(COMPOSER_IMAGE) $(VENDOR_BIN)/phpunit --testsuite integration
+	$(INTEG) ./vendor/bin/phpunit --testsuite integration
 
 # -- Aggregate ---------------------------------------------------------
 .PHONY: check
@@ -120,18 +130,23 @@ env-clean: ## Destroy the local wp-env Docker stack and its volumes.
 	npx wp-env destroy
 
 # -- Deploy / release --------------------------------------------------
+# Override DEPLOY_SCRIPT= to point at your own copy of the script.
+DEPLOY_SCRIPT ?= $(HOME)/.local/bin/dilux-deploy-to-mug
+
 .PHONY: deploy-test
 deploy-test: ## Deploy current branch to the mug-website-v2 sibling repo for manual smoke-testing.
-	@if [ ! -x /home/pablo/.local/bin/dilux-deploy-to-mug ]; then \
-	  echo "deploy-to-mug script not found — install it first."; exit 1; \
+	@if [ ! -x "$(DEPLOY_SCRIPT)" ]; then \
+	  echo "deploy script not found at $(DEPLOY_SCRIPT)."; \
+	  echo "Override DEPLOY_SCRIPT=/path/to/script to use a custom location."; \
+	  exit 1; \
 	fi
-	/home/pablo/.local/bin/dilux-deploy-to-mug
+	"$(DEPLOY_SCRIPT)"
 
 .PHONY: release
 release: check ## Pre-release validation: full quality gate + version-alignment dry-run.
 	@echo "── version alignment check ─────────────────────────────"
-	@PHP_VERSION=$$(grep -E '^\s*\*\s*Version:' dilux-cloud-storage.php | head -1 | sed -E 's/.*Version:\s*//'); \
-	 STABLE_TAG=$$(grep -E '^Stable tag:' readme.txt | sed -E 's/Stable tag:\s*//'); \
+	@PHP_VERSION=$$(grep -E '^[[:space:]]*\*[[:space:]]*Version:' dilux-cloud-storage.php | head -1 | sed -E 's/.*Version:[[:space:]]*//'); \
+	 STABLE_TAG=$$(grep -E '^Stable tag:' readme.txt | sed -E 's/Stable tag:[[:space:]]*//'); \
 	 PHP_BASE=$$(echo $$PHP_VERSION | sed -E 's/-(dev|alpha|beta|rc).*$$//'); \
 	 echo "  PHP header Version : $$PHP_VERSION"; \
 	 echo "  PHP base (no -dev) : $$PHP_BASE"; \
