@@ -681,6 +681,7 @@ class Admin {
 
 	/**
 	 * Get basic stats for templates
+	 * @return array<string, mixed>
 	 */
 	private static function get_basic_stats(): array {
 		global $wpdb;
@@ -715,6 +716,7 @@ class Admin {
 
 	/**
 	 * Get basic activity stats for templates
+	 * @return array<string, mixed>
 	 */
 	private static function get_basic_activity_stats(): array {
 		return array(
@@ -732,6 +734,7 @@ class Admin {
 
 	/**
 	 * Get basic health status for templates
+	 * @return array<string, mixed>
 	 */
 	private static function get_basic_health_status(): array {
 		return array(
@@ -744,6 +747,7 @@ class Admin {
 
 	/**
 	 * Get basic status checks for templates
+	 * @return array<string, mixed>
 	 */
 	private static function get_basic_status_checks(): array {
 		return array(

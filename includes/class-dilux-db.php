@@ -42,6 +42,7 @@ class DiluxDB {
 
 	/**
 	 * Get table name
+	 * @return string
 	 */
 	public static function get_table_name() {
 		global $wpdb;
@@ -177,6 +178,7 @@ class DiluxDB {
 	 * Mark file as successfully synced (uploaded to cloud)
 	 *
 	 * @param mixed $file_path
+	 * @return int|false
 	 */
 	public static function mark_synced( $file_path ) {
 		global $wpdb;
@@ -212,6 +214,7 @@ class DiluxDB {
 	 * Sets deleted=0 since file now exists locally
 	 *
 	 * @param mixed $file_path
+	 * @return int|false
 	 */
 	public static function mark_downloaded( $file_path ) {
 		global $wpdb;
@@ -241,6 +244,7 @@ class DiluxDB {
 	 *
 	 * @param mixed $file_path
 	 * @param mixed $bytes_transferred
+	 * @return int|false
 	 */
 	public static function update_progress( $file_path, $bytes_transferred ) {
 		global $wpdb;
@@ -264,6 +268,7 @@ class DiluxDB {
 	 *
 	 * @param string      $file_path Relative file path
 	 * @param string|null $error_message Optional error message to store
+	 * @return int|false
 	 */
 	public static function increment_error( $file_path, $error_message = null ) {
 		global $wpdb;
@@ -300,6 +305,7 @@ class DiluxDB {
 	 *
 	 * @param string $file_path
 	 * @param string $upload_id
+	 * @return int|false
 	 */
 	public static function set_upload_id( $file_path, $upload_id ) {
 		global $wpdb;
@@ -360,6 +366,7 @@ class DiluxDB {
 
 	/**
 	 * Get sync statistics
+	 * @return array<string, mixed>
 	 */
 	public static function get_stats() {
 		global $wpdb;
@@ -391,6 +398,7 @@ class DiluxDB {
 
 	/**
 	 * Get failed files (ALL files not synced, regardless of error count)
+	 * @return array<int, array<string, mixed>>
 	 */
 	public static function get_failed_files() {
 		global $wpdb;
@@ -408,6 +416,7 @@ class DiluxDB {
 
 	/**
 	 * Get all synced files (for deletion)
+	 * @return array<int, array<string, mixed>>
 	 */
 	public static function get_synced_files() {
 		global $wpdb;
@@ -425,6 +434,7 @@ class DiluxDB {
 
 	/**
 	 * Reset error counts (for retry)
+	 * @return int|false
 	 */
 	public static function reset_errors() {
 		global $wpdb;
@@ -506,6 +516,7 @@ class DiluxDB {
 
 	/**
 	 * Delete synced files from table (cleanup after successful sync)
+	 * @return int|false
 	 */
 	public static function delete_synced_files() {
 		global $wpdb;
@@ -532,6 +543,7 @@ class DiluxDB {
 
 	/**
 	 * Check if sync has any pending files
+	 * @return bool
 	 */
 	public static function has_pending_files() {
 		global $wpdb;
@@ -648,6 +660,7 @@ class DiluxDB {
 
 	/**
 	 * Get stats for deleted files
+	 * @return array<string, mixed>
 	 */
 	public static function get_deleted_stats() {
 		global $wpdb;
@@ -666,6 +679,7 @@ class DiluxDB {
 
 	/**
 	 * Check if there are deleted files to download
+	 * @return bool
 	 */
 	public static function has_deleted_files() {
 		global $wpdb;
