@@ -136,6 +136,14 @@ Requirements: PHP `ext-openssl` (enabled by default on virtually every host).
 8. Plugin settings.
 9. Plugin status & tools.
 
+== Upgrade Notice ==
+
+= 1.1.0 =
+* Consolidated release with admin-paused-state UX coherence and decrypt-failure handling. Plus internal CI/quality tooling (no runtime changes from that side).
+
+= 1.0.0 =
+* Initial release.
+
 == Changelog ==
 
 = 1.1.0 = (in development)
