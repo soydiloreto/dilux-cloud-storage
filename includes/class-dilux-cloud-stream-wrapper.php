@@ -491,7 +491,9 @@ class CloudStreamWrapper {
 			if ( $result['success'] ) {
 				// Cache the downloaded content for future reads
 				$content = file_get_contents( $temp_file );
-				$this->cache_set( $this->path, $content );
+				if ( $content !== false ) {
+					$this->cache_set( $this->path, $content );
+				}
 
 				$this->handle = fopen( $temp_file, $mode );
 				return $this->handle !== false;
@@ -533,7 +535,7 @@ class CloudStreamWrapper {
 	 */
 	public function stream_read( $count ) {
 		if ( $this->handle ) {
-			return fread( $this->handle, $count );
+			return $count > 0 ? fread( $this->handle, $count ) : '';
 		}
 
 		// Read from content buffer
@@ -954,9 +956,9 @@ class CloudStreamWrapper {
 	/**
 	 * Trigger error based on flags (copied from Infinite Uploads)
 	 *
-	 * @param string $error
-	 * @param int    $flags
-	 * @return bool|array<string, mixed>
+	 * @param string   $error
+	 * @param int|null $flags
+	 * @return false|array<int|string, mixed>
 	 */
 	private function trigger_error_internal( $error, $flags = null ) {
 		// This is triggered with things like file_exists()
@@ -1385,8 +1387,8 @@ class CloudStreamWrapper {
 	 * Called by opendir() - lists blobs with given prefix
 	 * Based on Infinite Uploads dir_opendir() (line 1068)
 	 *
-	 * @param string $path Directory path
-	 * @param int    $options Options
+	 * @param string   $path Directory path
+	 * @param int|null $options Options (null when called via dir_rewinddir)
 	 * @return bool
 	 */
 	public function dir_opendir( $path, $options ) {

@@ -488,10 +488,7 @@ class AzureProvider implements CloudStorageClientInterface {
 			$date       = gmdate( 'D, d M Y H:i:s T' );
 			$parsed_url = wp_parse_url( $dest_url );
 			if ( ! is_array( $parsed_url ) || empty( $parsed_url['path'] ) ) {
-				return array(
-					'success' => false,
-					'message' => 'Invalid destination URL for copy: ' . $dest_url,
-				);
+				return OperationResult::failure( 'Invalid destination URL for copy: ' . $dest_url );
 			}
 
 			// Build canonicalized resource

@@ -63,9 +63,10 @@ class Dilux_Image_Editor_Imagick extends \WP_Image_Editor_Imagick {
 	public function load() {
 		// Idempotency guard: parent::load() sets \$this->image to an \Imagick
 		// instance. Skip re-loading if already done. The PHPStan WP stub
-		// types \$image as `\Imagick` (always), but the parent initialises
-		// it to `false`, so the runtime check below is necessary.
-		// @phpstan-ignore-next-line booleanNot.alwaysFalse
+		// types \$image as `\Imagick` (always), so it considers the
+		// instanceof always true and the rest of the body unreachable —
+		// silence both at once with the union ignore.
+		/** @phpstan-ignore-next-line booleanNot.alwaysFalse, deadCode.unreachable */
 		if ( ! empty( $this->image ) && $this->image instanceof \Imagick ) {
 			return true;
 		}
