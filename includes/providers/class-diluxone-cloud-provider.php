@@ -1036,7 +1036,7 @@ class DiluxOneCloudProvider implements CloudStorageClientInterface {
 					break;
 				}
 
-				$block_id    = base64_encode( str_pad( $block_index, 6, '0', STR_PAD_LEFT ) );
+				$block_id    = base64_encode( str_pad( (string) $block_index, 6, '0', STR_PAD_LEFT ) );
 				$block_ids[] = $block_id;
 
 				$block_url = $base_url . '?comp=block&blockid=' . rawurlencode( $block_id ) . '&' . $sas_token;

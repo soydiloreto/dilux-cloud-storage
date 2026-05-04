@@ -48,7 +48,7 @@ class Dilux_Image_Editor_GD extends \WP_Image_Editor_GD {
 	/**
 	 * Temporary files to cleanup on destruct
 	 *
-	 * @var array<string, mixed>
+	 * @var array<int, string>
 	 */
 	protected $temp_files_to_cleanup = array();
 

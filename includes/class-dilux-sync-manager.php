@@ -858,7 +858,7 @@ class SyncManager {
 	 * PERFORMANCE BOOST: 10x faster than sequential uploads
 	 *
 	 * @param array<int, array<string, mixed>> $batch Array of file_info arrays
-	 * @return array<string, mixed> Array of results ['success' => bool, 'error' => string]
+	 * @return array<int, array<string, mixed>> Array of per-file result envelopes
 	 */
 	private function sync_files_parallel( $batch ) {
 		$results    = array();

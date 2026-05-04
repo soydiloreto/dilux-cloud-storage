@@ -487,6 +487,12 @@ class AzureProvider implements CloudStorageClientInterface {
 			// Build canonicalized headers for PUT with copy source
 			$date       = gmdate( 'D, d M Y H:i:s T' );
 			$parsed_url = wp_parse_url( $dest_url );
+			if ( ! is_array( $parsed_url ) || empty( $parsed_url['path'] ) ) {
+				return array(
+					'success' => false,
+					'message' => 'Invalid destination URL for copy: ' . $dest_url,
+				);
+			}
 
 			// Build canonicalized resource
 			$canonicalized_resource = '/' . $this->storage_account . $parsed_url['path'];
@@ -814,9 +820,12 @@ class AzureProvider implements CloudStorageClientInterface {
 	private function get_auth_headers( string $method, string $url, string $body = '', string $content_type = '' ): array {
 		$date       = gmdate( 'D, d M Y H:i:s T' );
 		$parsed_url = wp_parse_url( $url );
+		if ( ! is_array( $parsed_url ) ) {
+			$parsed_url = array();
+		}
 
 		// Build canonicalized resource
-		$canonicalized_resource = '/' . $this->storage_account . $parsed_url['path'];
+		$canonicalized_resource = '/' . $this->storage_account . ( $parsed_url['path'] ?? '' );
 
 		// Add canonicalized query parameters (sorted alphabetically)
 		if ( isset( $parsed_url['query'] ) ) {
@@ -824,7 +833,7 @@ class AzureProvider implements CloudStorageClientInterface {
 			ksort( $query_params ); // Sort alphabetically
 
 			foreach ( $query_params as $key => $value ) {
-				$canonicalized_resource .= "\n" . strtolower( $key ) . ':' . $value;
+				$canonicalized_resource .= "\n" . strtolower( (string) $key ) . ':' . ( is_array( $value ) ? wp_json_encode( $value ) : (string) $value );
 			}
 		}
 
@@ -1023,7 +1032,7 @@ class AzureProvider implements CloudStorageClientInterface {
 				}
 
 				// Generate unique block ID (base64 encoded, must be same length)
-				$block_id    = base64_encode( str_pad( $block_index, 6, '0', STR_PAD_LEFT ) );
+				$block_id    = base64_encode( str_pad( (string) $block_index, 6, '0', STR_PAD_LEFT ) );
 				$block_ids[] = $block_id;
 
 				// Upload block
@@ -1064,7 +1073,7 @@ class AzureProvider implements CloudStorageClientInterface {
 						$error_msg .= " - cURL: {$curl_error}";
 					}
 					if ( ! empty( $response ) ) {
-						$error_msg .= ' - Azure Response: ' . substr( $response, 0, 500 );
+						$error_msg .= ' - Azure Response: ' . substr( (string) $response, 0, 500 );
 					}
 					Logger::info( '[Dilux AzureProvider] Chunked upload error: ' . $error_msg );
 					return array(
