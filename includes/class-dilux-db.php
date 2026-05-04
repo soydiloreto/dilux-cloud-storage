@@ -90,7 +90,7 @@ class DiluxDB {
 	/**
 	 * Check if table exists
 	 */
-	public static function table_exists() {
+	public static function table_exists(): bool {
 		global $wpdb;
 		$table_name = self::get_table_name();
 
@@ -105,7 +105,7 @@ class DiluxDB {
 	 * @param string $file_path
 	 * @param int    $size
 	 */
-	public static function add_file( $file_path, $size ) {
+	public static function add_file( $file_path, $size ): bool {
 		global $wpdb;
 
 		$result = $wpdb->replace(
@@ -134,7 +134,7 @@ class DiluxDB {
 	 *
 	 * @param mixed $files
 	 */
-	public static function add_files_batch( $files ) {
+	public static function add_files_batch( $files ): bool {
 		global $wpdb;
 
 		if ( empty( $files ) ) {
@@ -444,7 +444,7 @@ class DiluxDB {
 	/**
 	 * Clear entire table (before new sync)
 	 */
-	public static function clear_table() {
+	public static function clear_table(): bool {
 		global $wpdb;
 
 		$result = $wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
@@ -459,7 +459,7 @@ class DiluxDB {
 	/**
 	 * Reset all files to pending (for "from scratch" sync)
 	 */
-	public static function reset_all_files_to_pending() {
+	public static function reset_all_files_to_pending(): bool {
 		global $wpdb;
 
 		$result = $wpdb->query(
@@ -482,7 +482,7 @@ class DiluxDB {
 	/**
 	 * Reset only failed files to pending (for "retry failed" sync)
 	 */
-	public static function reset_failed_files_to_pending() {
+	public static function reset_failed_files_to_pending(): bool {
 		global $wpdb;
 
 		// Reset ALL failed files (synced=0) back to pending for retry
@@ -524,7 +524,7 @@ class DiluxDB {
 	/**
 	 * Get total count of files
 	 */
-	public static function get_total_count() {
+	public static function get_total_count(): int {
 		global $wpdb;
 
 		return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::get_table_name() );
@@ -553,7 +553,7 @@ class DiluxDB {
 	 * @param string $file_path Relative file path
 	 * @param int    $size File size in bytes
 	 */
-	public static function add_cloud_only_file( $file_path, $size ) {
+	public static function add_cloud_only_file( $file_path, $size ): bool {
 		global $wpdb;
 
 		$result = $wpdb->replace(
@@ -582,7 +582,7 @@ class DiluxDB {
 	 *
 	 * @param array<string, mixed> $files Array of ['path' => string, 'size' => int]
 	 */
-	public static function add_cloud_only_files_batch( $files ) {
+	public static function add_cloud_only_files_batch( $files ): bool {
 		global $wpdb;
 
 		if ( empty( $files ) ) {
@@ -684,7 +684,7 @@ class DiluxDB {
 	/**
 	 * Count deleted files (for progress calculation)
 	 */
-	public static function count_deleted_files() {
+	public static function count_deleted_files(): int {
 		global $wpdb;
 
 		return (int) $wpdb->get_var(

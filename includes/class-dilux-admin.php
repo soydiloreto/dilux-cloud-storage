@@ -682,7 +682,7 @@ class Admin {
 	/**
 	 * Get basic stats for templates
 	 */
-	private static function get_basic_stats() {
+	private static function get_basic_stats(): array {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'dilux_cs_files';
 
@@ -716,7 +716,7 @@ class Admin {
 	/**
 	 * Get basic activity stats for templates
 	 */
-	private static function get_basic_activity_stats() {
+	private static function get_basic_activity_stats(): array {
 		return array(
 			'total_today'    => 0,
 			'total_week'     => 0,
@@ -733,7 +733,7 @@ class Admin {
 	/**
 	 * Get basic health status for templates
 	 */
-	private static function get_basic_health_status() {
+	private static function get_basic_health_status(): array {
 		return array(
 			'overall'         => 50,
 			'checks_passed'   => 3,
@@ -745,7 +745,7 @@ class Admin {
 	/**
 	 * Get basic status checks for templates
 	 */
-	private static function get_basic_status_checks() {
+	private static function get_basic_status_checks(): array {
 		return array(
 			'azure_connection'      => array(
 				'status'  => 'warning',
@@ -1060,7 +1060,7 @@ class Admin {
 	 * Uses instanceof to detect which method to call (get_stats for DiluxOne,
 	 * get_container_stats for Azure) since these methods are not in the interface.
 	 */
-	public static function ajax_refresh_stats() {
+	public static function ajax_refresh_stats(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1096,7 +1096,7 @@ class Admin {
 	/**
 	 * AJAX handler for saving updated credentials (Update Credentials modal)
 	 */
-	public static function ajax_save_updated_credentials() {
+	public static function ajax_save_updated_credentials(): void {
 		// Check nonce
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
@@ -1187,7 +1187,7 @@ class Admin {
 	/**
 	 * Handle offloading configuration save
 	 */
-	public static function save_offloading_config() {
+	public static function save_offloading_config(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'dilux_cs_save_offloading' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1246,7 +1246,7 @@ class Admin {
 	/**
 	 * AJAX handler for migration actions
 	 */
-	public static function ajax_migration_action() {
+	public static function ajax_migration_action(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1275,7 +1275,7 @@ class Admin {
 	/**
 	 * AJAX handler for individual status checks
 	 */
-	public static function ajax_test_check() {
+	public static function ajax_test_check(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1354,7 +1354,7 @@ class Admin {
 	/**
 	 * Remove provider configuration
 	 */
-	public static function remove_provider_config() {
+	public static function remove_provider_config(): void {
 		// Check nonce for security
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'dilux_cs_remove_provider' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'dilux-cloud-storage' ) );
@@ -1417,7 +1417,7 @@ class Admin {
 	/**
 	 * AJAX: Scan files for sync
 	 */
-	public static function ajax_scan_files() {
+	public static function ajax_scan_files(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1465,7 +1465,7 @@ class Admin {
 	/**
 	 * AJAX: Start sync process
 	 */
-	public static function ajax_start_sync() {
+	public static function ajax_start_sync(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1502,7 +1502,7 @@ class Admin {
 	/**
 	 * AJAX: Delete local files after sync
 	 */
-	public static function ajax_delete_local_files() {
+	public static function ajax_delete_local_files(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1603,7 +1603,7 @@ class Admin {
 	 *
 	 * @param mixed $path
 	 */
-	private static function cleanup_empty_directories( $path ) {
+	private static function cleanup_empty_directories( $path ): void {
 		if ( ! is_dir( $path ) ) {
 			return;
 		}
@@ -1645,7 +1645,7 @@ class Admin {
 	 * 1. Active sync: Cancel the sync and reset to CONFIGURED
 	 * 2. Synced state: Reset everything (DB + metadata + state) back to CONFIGURED
 	 */
-	public static function ajax_cancel_sync() {
+	public static function ajax_cancel_sync(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1720,7 +1720,7 @@ class Admin {
 	/**
 	 * AJAX: Mark sync as complete (sets state to SYNCED)
 	 */
-	public static function ajax_mark_sync_complete() {
+	public static function ajax_mark_sync_complete(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1777,14 +1777,14 @@ class Admin {
 	 * Old method removed in favor of the unified sync flow. Retry is now
 	 * handled by Plugin::ajax_cs_start_sync with retry_failed=1.
 	 */
-	public static function ajax_retry_failed() {
+	public static function ajax_retry_failed(): void {
 		wp_send_json_error( esc_html__( 'This endpoint is deprecated. Use ajax_cs_start_sync with retry_failed parameter instead.', 'dilux-cloud-storage' ) );
 	}
 
 	/**
 	 * AJAX: Clear failed files list
 	 */
-	public static function ajax_clear_failed() {
+	public static function ajax_clear_failed(): void {
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ?? '' ) ), 'dilux_cs_admin' ) ) {
 			wp_die( esc_html__( 'Invalid nonce', 'dilux-cloud-storage' ) );
 		}
@@ -1855,7 +1855,7 @@ class Admin {
 	/**
 	 * AJAX handler to remove provider configuration
 	 */
-	public static function ajax_remove_provider() {
+	public static function ajax_remove_provider(): void {
 		// Check nonce
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
@@ -1910,7 +1910,7 @@ class Admin {
 	/**
 	 * AJAX handler to import configuration from JSON
 	 */
-	public static function ajax_import_config() {
+	public static function ajax_import_config(): void {
 		// Check nonce
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 

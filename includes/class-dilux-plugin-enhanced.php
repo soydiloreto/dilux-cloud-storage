@@ -230,7 +230,7 @@ class Plugin {
 	/**
 	 * AJAX: Get sync progress
 	 */
-	public function ajax_get_sync_progress() {
+	public function ajax_get_sync_progress(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -264,7 +264,7 @@ class Plugin {
 	 *
 	 * This prevents race conditions when user takes time to confirm
 	 */
-	public function ajax_cs_start_sync() {
+	public function ajax_cs_start_sync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -418,7 +418,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Process batch (time-based batching)
 	 * For recursion-based approach
 	 */
-	public function ajax_cs_process_batch() {
+	public function ajax_cs_process_batch(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -444,7 +444,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Start reverse sync (for disconnect)
 	 * Supports 'continue' and 'scratch' modes
 	 */
-	public function ajax_cs_start_reverse_sync() {
+	public function ajax_cs_start_reverse_sync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -478,7 +478,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Process reverse sync batch
 	 * ⭐ OPTIMIZED: Restore concurrency level from metadata
 	 */
-	public function ajax_cs_process_reverse_batch() {
+	public function ajax_cs_process_reverse_batch(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -504,7 +504,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Compare with cloud to detect deleted files
 	 * Used before disconnect to catalog cloud files
 	 */
-	public function ajax_cs_compare_cloud() {
+	public function ajax_cs_compare_cloud(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -528,7 +528,7 @@ class Plugin {
 	/**
 	 * ⭐ NEW AJAX: Get deleted files stats (for disconnect modal)
 	 */
-	public function ajax_cs_get_deleted_stats() {
+	public function ajax_cs_get_deleted_stats(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -685,7 +685,7 @@ class Plugin {
 	 * Like Infinite Uploads - uses DB as source of truth (after remote scan)
 	 * Shows what needs to be downloaded before disconnect
 	 */
-	public function ajax_cs_calculate_download() {
+	public function ajax_cs_calculate_download(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -765,7 +765,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Calculate files to sync (upload)
 	 * This ONLY counts files - it does NOT start the sync
 	 */
-	public function ajax_cs_calculate_sync() {
+	public function ajax_cs_calculate_sync(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -874,7 +874,7 @@ class Plugin {
 	/**
 	 * AJAX: Activate offloading
 	 */
-	public function ajax_activate_offloading() {
+	public function ajax_activate_offloading(): void {
 		check_ajax_referer( 'dilux_admin_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1011,7 +1011,7 @@ class Plugin {
 	/**
 	 * ⭐ Reset state to configured (when canceling sync)
 	 */
-	public function ajax_cs_reset_state_to_configured() {
+	public function ajax_cs_reset_state_to_configured(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1062,7 +1062,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Discard failed files (remove from database)
 	 * Removes ALL files with synced=0 (failed files, regardless of error count)
 	 */
-	public function ajax_cs_discard_failed_files() {
+	public function ajax_cs_discard_failed_files(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1105,7 +1105,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Get deletable files stats
 	 * Uses DB-first approach like Infinite Uploads (fast, no filesystem scan)
 	 */
-	public function ajax_cs_get_deletable_stats() {
+	public function ajax_cs_get_deletable_stats(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1278,7 +1278,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Take control of sync (for multi-tab coordination)
 	 * Allows an inactive tab to take over the sync from another tab
 	 */
-	public function ajax_cs_take_control() {
+	public function ajax_cs_take_control(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1330,7 +1330,7 @@ class Plugin {
 	 * Returns the current sync state including session info and progress
 	 * Used by inactive tabs to detect if sync is active, inactive, or terminated
 	 */
-	public function ajax_cs_get_sync_state() {
+	public function ajax_cs_get_sync_state(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1471,7 +1471,7 @@ class Plugin {
 	 * ⭐ NEW AJAX: Get failed files count (for Enable Offloading validation)
 	 * Returns count of failed and pending files to validate before enabling offloading
 	 */
-	public function ajax_cs_get_failed_files_count() {
+	public function ajax_cs_get_failed_files_count(): void {
 		check_ajax_referer( 'dilux_cs_admin', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -1512,7 +1512,7 @@ class Plugin {
 	/**
 	 * Plugin activation hook
 	 */
-	public static function activate() {
+	public static function activate(): void {
 		Logger::info( '[Dilux Plugin] Activation hook called' );
 
 		// ⭐ Create custom database table for file tracking
@@ -1523,7 +1523,7 @@ class Plugin {
 	/**
 	 * Plugin deactivation hook
 	 */
-	public static function deactivate() {
+	public static function deactivate(): void {
 		Logger::info( '[Dilux Plugin] Deactivation hook called' );
 
 		// Deactivate stream wrapper if active

@@ -89,7 +89,7 @@ class DiluxValidationHelper {
 	 *
 	 * @param mixed $requesting_session_id
 	 */
-	private static function validate_multi_tab( $requesting_session_id ) {
+	private static function validate_multi_tab( $requesting_session_id ): array {
 		$sync_meta = get_option( 'dilux_cs_sync_meta', array() );
 
 		if ( empty( $sync_meta ) ) {
@@ -171,7 +171,7 @@ class DiluxValidationHelper {
 	 *
 	 * @param mixed $operation_type
 	 */
-	private static function validate_plugin_state( $operation_type ) {
+	private static function validate_plugin_state( $operation_type ): array {
 		$current_state = ConfigManager::get_state();
 
 		switch ( $operation_type ) {
@@ -231,7 +231,7 @@ class DiluxValidationHelper {
 	 *
 	 * @param mixed $operation_type
 	 */
-	private static function validate_files_state( $operation_type ) {
+	private static function validate_files_state( $operation_type ): array {
 		if ( $operation_type !== 'enable_offloading' ) {
 			// Otras operaciones no requieren validación de archivos
 			return array(

@@ -1311,7 +1311,7 @@ class CloudStreamWrapper {
 	/**
 	 * Clear stat cache
 	 */
-	public static function clear_stat_cache() {
+	public static function clear_stat_cache(): void {
 		self::$stat_cache = array();
 	}
 
@@ -1345,7 +1345,7 @@ class CloudStreamWrapper {
 	 * @param string $path File path
 	 * @param string $content File content
 	 */
-	private function cache_set( $path, $content ) {
+	private function cache_set( $path, $content ): void {
 		// Don't cache files that are too big (like Infinite Uploads)
 		if ( strlen( $content ) > self::CACHE_MAX_BYTES ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -1366,7 +1366,7 @@ class CloudStreamWrapper {
 	/**
 	 * Clear file cache
 	 */
-	public static function clear_file_cache() {
+	public static function clear_file_cache(): void {
 		self::$file_cache = array();
 	}
 
