@@ -1084,6 +1084,23 @@ class Plugin {
 
 			if ( $result !== false ) {
 				Logger::info( '[Dilux Plugin] Discarded ' . $result . ' failed files from database' );
+
+				// After the discard, every remaining row in the table has either
+				// `synced = 1` or `deleted = 1`, so from the plugin's perspective
+				// there are no more outstanding sync obstacles. If we were sitting
+				// in SYNCING because of those failures, promote to SYNCED so the
+				// follow-up `dilux_activate_offloading` AJAX call (fired by the
+				// "Clear Failed & Enable" modal in templates/admin-sync.php) can
+				// succeed. Without this, `CloudStreamWrapper::activate_offloading`
+				// returns false because `PluginState::can_activate_offloading`
+				// only accepts SYNCED, and the user sees:
+				// "Files discarded but failed to enable offloading".
+				$current_state = ConfigManager::get_state();
+				if ( PluginState::SYNCING === $current_state ) {
+					ConfigManager::set_state( PluginState::SYNCED );
+					Logger::info( '[Dilux Plugin] State transitioned SYNCING -> SYNCED after discarding all failed files' );
+				}
+
 				wp_send_json_success(
 					array(
 						'message'       => 'Failed files discarded',
