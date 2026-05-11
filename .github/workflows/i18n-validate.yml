@@ -93,7 +93,7 @@ jobs:
           fi
 
       - name: Upload .pot artefact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dilux-cloud-storage-pot
           path: build/dilux-cloud-storage.pot
